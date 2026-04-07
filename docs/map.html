@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SF Emergency KG — Incident Map — Paradigma</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css"/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--navy:#181F2C;--coral:#FF4745;--bg:#fff;--bg2:#F7F8FA;--bg3:#EEF0F4;--text:#181F2C;--text2:#5A6175;--text3:#8B92A5;--border:rgba(24,31,44,.1);--border2:rgba(24,31,44,.06);--green:#34A853;--blue:#2563EB;--purple:#7C3AED;--amber:#F59E0B}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--bg);border-bottom:1px solid var(--border2);flex-shrink:0;gap:12px;flex-wrap:wrap}
+.top-bar .left{display:flex;align-items:center;gap:12px}
+.top-bar .brand-dot{width:7px;height:7px;border-radius:50%;background:var(--coral)}
+.top-bar h1{font-size:15px;font-weight:600;color:var(--navy);white-space:nowrap}
+.top-bar h1 span{color:var(--coral)}
+.top-bar a{color:var(--coral);font-size:12px;text-decoration:none;font-weight:500}
+.top-bar a:hover{opacity:.7}
+
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.controls label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:500}
+.controls input[type="date"],.controls select{background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 10px;font-size:12px;font-family:inherit}
+.controls input[type="date"]:focus,.controls select:focus{outline:none;border-color:var(--coral)}
+.controls button{background:var(--coral);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-family:inherit;font-weight:500;cursor:pointer;transition:opacity .15s}
+.controls button:hover{opacity:.85}
+.controls button.secondary{background:var(--bg2);color:var(--text2);border:1px solid var(--border)}
+.controls button.secondary:hover{background:var(--bg3)}
+
+.stats-bar{display:flex;gap:20px;padding:8px 24px;background:var(--bg2);border-bottom:1px solid var(--border2);font-size:12px;color:var(--text2);flex-shrink:0;flex-wrap:wrap}
+.stats-bar .si strong{color:var(--navy);font-weight:600}
+
+#map{flex:1;z-index:1}
+
+.leaflet-popup-content-wrapper{background:#fff!important;color:var(--text)!important;border-radius:12px!important;border:1px solid var(--border)!important;box-shadow:0 8px 32px rgba(24,31,44,.12)!important}
+.leaflet-popup-tip{background:#fff!important}
+.leaflet-popup-content{margin:14px 18px!important;font-family:'Inter',sans-serif!important;font-size:13px!important;line-height:1.6!important}
+.popup-title{font-weight:600;font-size:14px;color:var(--navy);margin-bottom:8px}
+.popup-row{display:flex;justify-content:space-between;gap:16px;padding:3px 0}
+.popup-label{color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.3px;font-weight:500}
+.popup-value{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text)}
+.popup-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;margin-top:6px}
+.sev-MINOR{background:rgba(52,168,83,.1);color:var(--green)}
+.sev-MODERATE{background:rgba(245,158,11,.1);color:var(--amber)}
+.sev-SEVERE{background:rgba(124,58,237,.1);color:var(--purple)}
+.sev-CRITICAL{background:rgba(255,71,69,.1);color:var(--coral)}
+
+.loading-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .3s}
+.loading-overlay.hidden{opacity:0;pointer-events:none}
+.loading-spinner{width:36px;height:36px;border:3px solid var(--bg3);border-top-color:var(--coral);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;color:var(--text2);font-weight:500}
+.loading-sub{font-size:12px;color:var(--text3);margin-top:4px}
+
+.marker-cluster-small{background-color:rgba(52,168,83,.2)!important}
+.marker-cluster-small div{background-color:rgba(52,168,83,.75)!important;color:#fff!important;font-family:'Inter',sans-serif!important;font-weight:600!important}
+.marker-cluster-medium{background-color:rgba(245,158,11,.2)!important}
+.marker-cluster-medium div{background-color:rgba(245,158,11,.75)!important;color:#fff!important;font-family:'Inter',sans-serif!important;font-weight:600!important}
+.marker-cluster-large{background-color:rgba(255,71,69,.2)!important}
+.marker-cluster-large div{background-color:rgba(255,71,69,.75)!important;color:#fff!important;font-family:'Inter',sans-serif!important;font-weight:600!important}
+</style>
+</head>
+<body>
+<div class="loading-overlay" id="loading"><div class="loading-spinner"></div><div class="loading-text">Loading incident data...</div><div class="loading-sub" id="loading-sub">Preparing knowledge graph export</div></div>
+
+<div class="top-bar">
+<div class="left"><div class="brand-dot"></div><h1><span>SF Emergency</span> Incident Map</h1><a href="index.html">← Back to ontology</a></div>
+<div class="controls">
+<label>From</label><input type="date" id="date-from" value="2023-01-01">
+<label>To</label><input type="date" id="date-to" value="2023-12-31">
+<label>Type</label><select id="filter-type"><option value="">All types</option></select>
+<label>Severity</label><select id="filter-severity"><option value="">All</option><option value="MINOR">Minor</option><option value="MODERATE">Moderate</option><option value="SEVERE">Severe</option><option value="CRITICAL">Critical</option></select>
+<label>Agency</label><select id="filter-agency"><option value="">All</option><option value="multi">Multi-agency only</option><option value="single">Single agency only</option></select>
+<button onclick="applyFilters()">Apply</button><button class="secondary" onclick="resetFilters()">Reset</button>
+</div>
+</div>
+<div class="stats-bar" id="stats-bar"><div class="si">Loading...</div></div>
+<div id="map"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<script>
+const SC={MINOR:'#34A853',MODERATE:'#F59E0B',SEVERE:'#7C3AED',CRITICAL:'#FF4745','':'#8B92A5'};
+let map,cg,allData=[],filteredData=[];
+map=L.map('map',{preferCanvas:true}).setView([37.76,-122.44],13);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',subdomains:'abcd',maxZoom:19}).addTo(map);
+cg=L.markerClusterGroup({maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,chunkedLoading:true,chunkInterval:100,chunkDelay:10});map.addLayer(cg);
+
+function mkr(i){const c=SC[i.sev]||SC[''];const m=L.circleMarker([i.lat,i.lng],{radius:5,fillColor:c,color:c,weight:1,opacity:.8,fillOpacity:.6});
+const ma=i.ma?'<span style="color:#34A853;font-weight:600">Yes</span>':'No',sv=i.sev?`sev-${i.sev}`:'',rt=i.rm?`${i.rm} min`:'—';
+m.bindPopup(`<div class="popup-title">${i.ct||'Unknown'}</div><div class="popup-row"><span class="popup-label">Address</span><span class="popup-value">${i.addr||'—'}</span></div><div class="popup-row"><span class="popup-label">Date/Time</span><span class="popup-value">${i.ts?i.ts.replace('T',' '):'—'}</span></div><div class="popup-row"><span class="popup-label">CAD #</span><span class="popup-value">${i.id||'—'}</span></div><div class="popup-row"><span class="popup-label">Neighborhood</span><span class="popup-value">${i.nb||'—'}</span></div><div class="popup-row"><span class="popup-label">Priority</span><span class="popup-value">${i.pr||'—'}</span></div><div class="popup-row"><span class="popup-label">Units dispatched</span><span class="popup-value">${i.rc||'—'}</span></div><div class="popup-row"><span class="popup-label">Resolution time</span><span class="popup-value">${rt}</span></div><div class="popup-row"><span class="popup-label">Multi-agency</span><span class="popup-value">${ma}</span></div><div class="popup-row"><span class="popup-label">Disposition</span><span class="popup-value">${i.disp||'—'}</span></div>${i.sev?`<span class="popup-badge ${sv}">${i.sev}</span>`:''}`,{maxWidth:320});return m}
+
+function updateStats(d){const t=d.length,mu=d.filter(x=>x.ma).length,sv={};d.forEach(x=>{if(x.sev)sv[x.sev]=(sv[x.sev]||0)+1});const tc={};d.forEach(x=>{if(x.ct)tc[x.ct]=(tc[x.ct]||0)+1});const top=Object.entries(tc).sort((a,b)=>b[1]-a[1])[0];
+document.getElementById('stats-bar').innerHTML=`<div class="si"><strong>${t.toLocaleString()}</strong> incidents shown</div><div class="si"><strong>${mu.toLocaleString()}</strong> multi-agency (${t>0?(100*mu/t).toFixed(1):0}%)</div><div class="si" style="color:var(--green)">Minor: <strong>${(sv.MINOR||0).toLocaleString()}</strong></div><div class="si" style="color:var(--amber)">Moderate: <strong>${(sv.MODERATE||0).toLocaleString()}</strong></div><div class="si" style="color:var(--purple)">Severe: <strong>${(sv.SEVERE||0).toLocaleString()}</strong></div><div class="si" style="color:var(--coral)">Critical: <strong>${(sv.CRITICAL||0).toLocaleString()}</strong></div>${top?`<div class="si">Top: <strong>${top[0]}</strong> (${top[1].toLocaleString()})</div>`:''}`}
+
+function render(d){cg.clearLayers();const rd=d.length>80000?d.slice(0,80000):d;const ms=[];rd.forEach(i=>{if(i.lat&&i.lng)ms.push(mkr(i))});cg.addLayers(ms);updateStats(d);if(d.length>80000)document.getElementById('stats-bar').innerHTML+=`<div class="si" style="color:var(--coral)">Showing first 80K of ${d.length.toLocaleString()}</div>`}
+
+function applyFilters(){const df=document.getElementById('date-from').value,dt=document.getElementById('date-to').value,tf=document.getElementById('filter-type').value,sf=document.getElementById('filter-severity').value,af=document.getElementById('filter-agency').value;
+filteredData=allData.filter(i=>{const d=i.ts?i.ts.substring(0,10):'';if(df&&d<df)return false;if(dt&&d>dt)return false;if(tf&&i.ct!==tf)return false;if(sf&&i.sev!==sf)return false;if(af==='multi'&&!i.ma)return false;if(af==='single'&&i.ma)return false;return true});render(filteredData)}
+
+function resetFilters(){document.getElementById('date-from').value='2023-01-01';document.getElementById('date-to').value='2023-12-31';document.getElementById('filter-type').value='';document.getElementById('filter-severity').value='';document.getElementById('filter-agency').value='';applyFilters()}
+
+async function init(){const ls=document.getElementById('loading-sub');try{ls.textContent='Fetching map_data.json...';const r=await fetch('map_data.json');if(!r.ok)throw new Error(`HTTP ${r.status}: map_data.json not found. Run: python3 scripts/export_map_data.py`);ls.textContent='Parsing JSON...';const data=await r.json();allData=data.incidents||[];ls.textContent=`Loaded ${allData.length.toLocaleString()} incidents`;
+const types=[...new Set(allData.map(d=>d.ct).filter(Boolean))].sort();const ts=document.getElementById('filter-type');types.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;ts.appendChild(o)});
+if(data.stats){const mx=data.stats.date_max||'2025-12-31',ly=mx.substring(0,4);document.getElementById('date-from').value=`${ly}-01-01`;document.getElementById('date-to').value=mx}
+applyFilters();document.getElementById('loading').classList.add('hidden')}catch(e){ls.textContent=e.message;ls.style.color='#FF4745';console.error(e)}}
+init();
+</script>
+</body>
+</html>

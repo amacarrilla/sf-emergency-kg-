@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SF Emergency Services Knowledge Graph — Paradigma</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--navy:#181F2C;--navy-80:rgba(24,31,44,.8);--navy-60:rgba(24,31,44,.6);--navy-10:rgba(24,31,44,.1);--navy-05:rgba(24,31,44,.05);--coral:#FF4745;--coral-bg:rgba(255,71,69,.08);--bg:#fff;--bg2:#F7F8FA;--bg3:#EEF0F4;--text:#181F2C;--text2:#5A6175;--text3:#8B92A5;--border:rgba(24,31,44,.1);--border2:rgba(24,31,44,.06);--green:#34A853;--blue:#2563EB;--purple:#7C3AED;--amber:#F59E0B}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+.page-header{padding:48px 48px 32px;max-width:1040px;margin:0 auto}
+.brand-row{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--coral)}
+.brand-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3)}
+.page-header h1{font-size:32px;font-weight:700;letter-spacing:-.5px;color:var(--navy)}
+.page-header h1 span{color:var(--coral)}
+.page-header .subtitle{font-size:15px;color:var(--text2);line-height:1.7;max-width:680px;margin-top:8px}
+.meta{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap}
+.stat{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:12px 18px;font-size:13px;color:var(--text2)}
+.stat strong{display:block;font-size:22px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.link-row{margin-top:16px;display:flex;gap:20px}
+.page-link{font-size:13px;color:var(--coral);text-decoration:none;font-weight:500;transition:opacity .15s}
+.page-link:hover{opacity:.7}
+.graph-container{max-width:1040px;margin:0 auto;padding:0 48px}
+.graph-wrapper{background:var(--navy);border-radius:16px;overflow:hidden;position:relative}
+#graph-canvas{display:block;width:100%;cursor:grab}
+#graph-canvas:active{cursor:grabbing}
+.legend{position:absolute;top:16px;left:16px;background:rgba(24,31,44,.92);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 18px;font-size:12px;color:rgba(255,255,255,.7);display:flex;flex-direction:column;gap:7px;z-index:10}
+.legend-item{display:flex;align-items:center;gap:8px}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.legend-line{width:24px;height:0;border-top:2px solid}
+.legend-line.dashed{border-top-style:dashed}
+.controls{position:absolute;bottom:16px;right:16px;z-index:10}
+.controls button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:rgba(255,255,255,.7);font-size:12px;padding:7px 14px;cursor:pointer;font-family:inherit}
+.controls button:hover{background:rgba(255,255,255,.18);color:#fff}
+.hint{position:absolute;bottom:16px;left:16px;font-size:11px;color:rgba(255,255,255,.35);z-index:10}
+.section{max-width:1040px;margin:48px auto 0;padding:0 48px}
+.section:last-of-type{padding-bottom:64px}
+.section h2{font-size:24px;font-weight:700;color:var(--navy);margin-bottom:24px;letter-spacing:-.3px}
+.results-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px}
+.rcard{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;transition:box-shadow .2s}
+.rcard:hover{box-shadow:0 4px 20px rgba(24,31,44,.08)}
+.rcard .lab{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:12px;font-weight:500}
+.rcard .num{font-size:36px;font-weight:700}
+.rcard .unit{font-size:12px;color:var(--text3);margin-left:8px}
+.rcard .desc{font-size:13px;color:var(--text2);line-height:1.7;margin-top:10px}
+.rcard .desc strong{color:var(--navy)}
+.rcard .tags{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.rcard .tags span{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:500}
+.insight{background:var(--bg2);border:1px solid var(--border2);border-left:3px solid var(--coral);border-radius:0 12px 12px 0;padding:24px 28px;font-size:13px;color:var(--text2);line-height:1.8}
+.insight strong{color:var(--navy)}.insight em{color:var(--navy)}
+.stack{display:flex;flex-direction:column}.stack-layer{background:var(--bg2);border:1px solid var(--border2);padding:24px 28px;position:relative}
+.stack-layer:first-child{border-radius:16px 16px 0 0}.stack-layer:last-child{border-radius:0 0 16px 16px}.stack-layer+.stack-layer{border-top:none}
+.lnum{position:absolute;top:24px;left:28px;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.lhead{margin-left:40px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.lhead h3{font-size:16px;font-weight:600;color:var(--navy)}
+.badge{font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;border-radius:6px;font-weight:500}
+.lbody{margin-left:40px;font-size:13px;color:var(--text2);line-height:1.7}
+.ltags{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+.ltags span{background:var(--bg3);border:1px solid var(--border);padding:4px 10px;border-radius:6px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text2)}
+.sarrow{text-align:center;padding:4px 0;color:var(--text3);font-size:16px;background:var(--bg2);border-left:1px solid var(--border2);border-right:1px solid var(--border2)}
+.ptable{width:100%;border-collapse:collapse;font-size:13px}
+.ptable th{text-align:left;padding:10px 14px;background:var(--bg3);border-bottom:1px solid var(--border);font-weight:500;color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+.ptable th:first-child{border-radius:8px 0 0 0}.ptable th:last-child{border-radius:0 8px 0 0}
+.ptable td{padding:10px 14px;border-bottom:1px solid var(--border2);vertical-align:top}
+.ptable tr:hover td{background:var(--navy-05)}
+.ptable .cn{font-family:'JetBrains Mono',monospace;font-weight:500;font-size:12px}
+.ptable code{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2)}
+.footer{max-width:1040px;margin:0 auto;padding:32px 48px;border-top:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text3)}
+@media(max-width:768px){.page-header,.graph-container,.section,.footer{padding-left:20px;padding-right:20px}.page-header h1{font-size:24px}.results-grid{grid-template-columns:1fr}.legend{display:none}}
+</style>
+</head>
+<body>
+<header class="page-header">
+<div class="brand-row"><div class="brand-dot"></div><span class="brand-label">Paradigma · Knowledge Graph PoC</span></div>
+<h1><span>SF Emergency Services</span> Knowledge Graph</h1>
+<p class="subtitle">A layered semantic data foundation for multi-agency emergency response analysis and prediction. Built on real San Francisco 911 dispatch data — 141 million triples from 7.2 million records.</p>
+<div class="meta"><div class="stat"><strong>3</strong>agencies</div><div class="stat"><strong>141M</strong>triples</div><div class="stat"><strong>15</strong>classes</div><div class="stat"><strong>3.3M</strong>incidents</div><div class="stat"><strong>7.2M</strong>responses</div></div>
+<div class="link-row"><a class="page-link" href="http://localhost:8080/map.html">Incident map →</a></div>
+</header>
+<section class="graph-container"><div class="graph-wrapper">
+<canvas id="graph-canvas" width="944" height="560"></canvas>
+<div class="legend">
+<div class="legend-item"><div class="legend-dot" style="background:#FF4745"></div>Core domain</div>
+<div class="legend-item"><div class="legend-dot" style="background:#2563EB"></div>Agency infrastructure</div>
+<div class="legend-item"><div class="legend-dot" style="background:#F59E0B"></div>Location hierarchy</div>
+<div class="legend-item"><div class="legend-dot" style="background:#7C3AED"></div>Call type alignment</div>
+<div class="legend-item"><div class="legend-dot" style="background:#34A853"></div>Prediction</div>
+<div class="legend-item"><div class="legend-dot" style="background:#8B92A5"></div>Supporting</div>
+<div class="legend-item"><div class="legend-line" style="border-color:rgba(255,255,255,.3)"></div>Object property</div>
+<div class="legend-item"><div class="legend-line dashed" style="border-color:#34d399"></div>Inverse / derived</div>
+</div>
+<div class="controls"><button onclick="resetView()">Reset view</button></div>
+<div class="hint">Scroll to zoom · drag to pan · drag nodes to rearrange</div>
+</div></section>
+<section class="section"><h2>Data foundation</h2><div class="meta"><div class="stat"><strong>7.2M</strong>rows processed</div><div class="stat"><strong>3.3M</strong>incidents</div><div class="stat"><strong>141M</strong>total triples</div><div class="stat"><strong>23.8%</strong>multi-agency</div><div class="stat"><strong>9,597</strong>hotspot locations</div></div></section>
+<section class="section"><h2>Results — Knowledge graph vs flat table</h2>
+<div class="results-grid">
+<div class="rcard"><div class="lab">Multi-agency escalation</div><div><span class="num" style="color:var(--green)">+79.6%</span><span class="unit">Accuracy</span></div><div class="desc">KG achieves <strong>100% accuracy</strong> vs 83.9% flat. The graph traverses Response → Unit → Agency to know exactly which agencies responded.</div><div class="tags"><span style="background:rgba(52,168,83,.1);color:var(--green)">agency_count</span><span style="background:rgba(52,168,83,.1);color:var(--green)">is_multi_agency</span></div></div>
+<div class="rcard"><div class="lab">Resolution time</div><div><span class="num" style="color:var(--blue)">+4.3%</span><span class="unit">RMSE improvement</span></div><div class="desc">MAE drops from 24.75 to <strong>23.94 minutes</strong>. Graph-derived response times and location history improve prediction.</div><div class="tags"><span style="background:rgba(37,99,235,.1);color:var(--blue)">avg_response_time</span><span style="background:rgba(37,99,235,.1);color:var(--blue)">location_prior_count</span></div></div>
+<div class="rcard"><div class="lab">Severity classification</div><div><span class="num" style="color:var(--text3)">−2.2%</span><span class="unit">accuracy delta</span></div><div class="desc">Flat model slightly wins at <strong>86.9% accuracy</strong>. Severity signal already exists in priority and response count.</div><div class="tags"><span style="background:var(--navy-05);color:var(--text3)">signal already in flat features</span></div></div>
+</div>
+<div class="insight"><strong>Key insight:</strong> The knowledge graph's value is not universal — it shines when the prediction depends on <em>relationships between entities</em> that don't exist in a flat table. The real value is infrastructural: the same graph powers all three models, answers ad-hoc SPARQL queries, and grows without schema changes.</div>
+</section>
+<section class="section"><h2>Knowledge graph stack</h2><div class="stack">
+<div class="stack-layer"><div class="lnum" style="background:var(--coral-bg);color:var(--coral)">4</div><div class="lhead"><h3>Predictive models</h3><span class="badge" style="background:var(--coral-bg);color:var(--coral)">user-defined</span></div><div class="lbody">Constrained logistic regression + random forest. Three targets: severity, multi-agency, resolution time.<div class="ltags"><span>Severity</span><span>Multi-agency?</span><span>Resolution time</span></div></div></div>
+<div class="sarrow">↑</div>
+<div class="stack-layer"><div class="lnum" style="background:rgba(124,58,237,.1);color:var(--purple)">3</div><div class="lhead"><h3>Enrichment</h3><span class="badge" style="background:rgba(124,58,237,.1);color:var(--purple)">user-defined</span></div><div class="lbody">Added via APIs using location + timestamp.<div class="ltags"><span>Weather (NOAA)</span><span>Census / ACS</span><span>Zoning</span><span>Events</span></div></div></div>
+<div class="sarrow">↑</div>
+<div class="stack-layer"><div class="lnum" style="background:rgba(52,168,83,.1);color:var(--green)">2</div><div class="lhead"><h3>Inference</h3></div><div class="lbody">Derived via SHACL rules and inverse paths. Same CAD number links all agencies.<div class="ltags"><span>Incident → responses</span><span>Cross-agency alignment</span><span>Location history</span><span>isMultiAgency</span></div></div></div>
+<div class="sarrow">↑</div>
+<div class="stack-layer"><div class="lnum" style="background:rgba(37,99,235,.1);color:var(--blue)">1</div><div class="lhead"><h3>Foundation</h3><span class="badge" style="background:rgba(37,99,235,.1);color:var(--blue)">published</span></div><div class="lbody">Ontology + instance data. All datasets share the same URIs.<div class="ltags"><span>owl:Class defs</span><span>sh:NodeShape</span><span>SHACL validation</span><span>Fire calls ~700K</span><span>Police dispatch</span><span>EMS</span></div></div></div>
+</div></section>
+<section class="section"><h2>Property reference</h2>
+<table class="ptable"><thead><tr><th>Class</th><th>Object properties (→ target)</th><th>Key datatype properties</th></tr></thead><tbody>
+<tr><td class="cn" style="color:var(--coral)">Incident</td><td><code>hasResponse → Response · hasCallType → CallType · hasLocation → Location · hasSeverity → SeverityLevel</code></td><td><code>cadNumber · receivedTimestamp · priorityCode · responseCount · totalResolutionMinutes</code></td></tr>
+<tr><td class="cn" style="color:var(--coral)">Response</td><td><code>responseTo → Incident · hasUnit → Unit</code></td><td><code>dispatchTimestamp · onSceneTimestamp · responseTimeMinutes</code></td></tr>
+<tr><td class="cn" style="color:var(--blue)">Unit</td><td><code>belongsToAgency → Agency</code></td><td><code>unitId · unitType</code></td></tr>
+<tr><td class="cn" style="color:var(--blue)">Agency</td><td>—</td><td><code>title</code></td></tr>
+<tr><td class="cn" style="color:var(--purple)">CallType</td><td><code>realizationOf → IncidentConcept · hasAgency → Agency</code></td><td>—</td></tr>
+<tr><td class="cn" style="color:var(--purple)">IncidentConcept</td><td>—</td><td><code>description</code></td></tr>
+<tr><td class="cn" style="color:var(--amber)">Location</td><td><code>inNeighborhood → Neighborhood · inStationArea → StationArea</code></td><td><code>address · latitude · longitude · zipCode</code></td></tr>
+<tr><td class="cn" style="color:var(--green)">PredictionSet</td><td><code>hasPrediction → Prediction</code></td><td><code>modelName · featureSet · accuracy</code></td></tr>
+<tr><td class="cn" style="color:var(--green)">Prediction</td><td><code>predictsIncident → Incident</code></td><td><code>predictedProbability · predictedClass</code></td></tr>
+</tbody></table></section>
+<footer class="footer"><div style="display:flex;align-items:center;gap:8px"><div class="brand-dot" style="width:6px;height:6px"></div><span>Paradigma Digital · PoC Knowledge Graph · April 2026</span></div></footer>
+<script>
+const C=document.getElementById('graph-canvas'),X=C.getContext('2d'),D=devicePixelRatio||1;let W=C.clientWidth,H=C.clientHeight;C.width=W*D;C.height=H*D;X.scale(D,D);
+const GC={core:'#FF4745',agency:'#2563EB',location:'#F59E0B',calltype:'#7C3AED',prediction:'#34A853',supporting:'#8B92A5'},GL={core:'rgba(255,71,69,.15)',agency:'rgba(37,99,235,.15)',location:'rgba(245,158,11,.15)',calltype:'rgba(124,58,237,.15)',prediction:'rgba(52,168,83,.15)',supporting:'rgba(139,146,165,.15)'};
+const N=[{id:'Incident',group:'core',x:W*.45,y:H*.38,r:32},{id:'Response',group:'core',x:W*.22,y:H*.25,r:26},{id:'Unit',group:'agency',x:W*.15,y:H*.48,r:22},{id:'Agency',group:'agency',x:W*.12,y:H*.7,r:22},{id:'CallType',group:'calltype',x:W*.65,y:H*.2,r:24},{id:'IncidentConcept',group:'calltype',x:W*.85,y:H*.15,r:26},{id:'Location',group:'location',x:W*.35,y:H*.65,r:24},{id:'Neighborhood',group:'location',x:W*.2,y:H*.85,r:24},{id:'StationArea',group:'location',x:W*.48,y:H*.85,r:24},{id:'Battalion',group:'location',x:W*.65,y:H*.9,r:22},{id:'TimeWindow',group:'supporting',x:W*.7,y:H*.45,r:24},{id:'SeverityLevel',group:'supporting',x:W*.82,y:H*.6,r:24},{id:'PredictionSet',group:'prediction',x:W*.78,y:H*.78,r:24},{id:'Prediction',group:'prediction',x:W*.9,y:H*.88,r:24},{id:'EnrichmentSource',group:'supporting',x:W*.88,y:H*.38,r:24}];
+const E=[{s:'Incident',t:'Response',l:'hasResponse',d:0},{s:'Response',t:'Unit',l:'hasUnit',d:0},{s:'Unit',t:'Agency',l:'belongsTo',d:0},{s:'Incident',t:'CallType',l:'hasCallType',d:0},{s:'CallType',t:'IncidentConcept',l:'realizationOf',d:0},{s:'CallType',t:'Agency',l:'hasAgency',d:0},{s:'Incident',t:'Location',l:'hasLocation',d:0},{s:'Location',t:'Neighborhood',l:'inNeighborhood',d:0},{s:'Location',t:'StationArea',l:'inStationArea',d:0},{s:'StationArea',t:'Battalion',l:'inBattalion',d:0},{s:'Incident',t:'TimeWindow',l:'inTimeWindow',d:0},{s:'Incident',t:'SeverityLevel',l:'hasSeverity',d:0},{s:'Incident',t:'EnrichmentSource',l:'enrichedBy',d:0},{s:'PredictionSet',t:'Prediction',l:'hasPrediction',d:0},{s:'Prediction',t:'Incident',l:'predictsIncident',d:0},{s:'Prediction',t:'SeverityLevel',l:'predictsSeverity',d:0},{s:'Response',t:'Incident',l:'responseTo',d:1},{s:'Location',t:'Incident',l:'hasIncidentHistory',d:1},{s:'Unit',t:'Incident',l:'nominatedFor',d:1}];
+const M={};N.forEach(n=>{M[n.id]=n;n.vx=0;n.vy=0});let T={x:0,y:0,k:1},dr=null,pn=false,ps={x:0,y:0},hv=null;
+function s2w(a,b){return{x:(a-T.x)/T.k,y:(b-T.y)/T.k}}function fn(a,b){const w=s2w(a,b);for(let i=N.length-1;i>=0;i--){const n=N[i],dx=w.x-n.x,dy=w.y-n.y;if(dx*dx+dy*dy<(n.r+6)**2)return n}return null}
+C.onmousedown=e=>{const r=C.getBoundingClientRect(),a=e.clientX-r.left,b=e.clientY-r.top,n=fn(a,b);if(n){dr=n;dr.fx=n.x;dr.fy=n.y}else{pn=true;ps={x:e.clientX-T.x,y:e.clientY-T.y}}};
+C.onmousemove=e=>{const r=C.getBoundingClientRect(),a=e.clientX-r.left,b=e.clientY-r.top;if(dr){const w=s2w(a,b);dr.x=w.x;dr.y=w.y;dr.fx=w.x;dr.fy=w.y}else if(pn){T.x=e.clientX-ps.x;T.y=e.clientY-ps.y}else{hv=fn(a,b);C.style.cursor=hv?'grab':'default'}};
+C.onmouseup=()=>{if(dr){delete dr.fx;delete dr.fy}dr=null;pn=false};
+C.addEventListener('wheel',e=>{e.preventDefault();const r=C.getBoundingClientRect(),a=e.clientX-r.left,b=e.clientY-r.top,nk=Math.max(.3,Math.min(3,T.k*(1-e.deltaY*.001))),rt=nk/T.k;T.x=a-rt*(a-T.x);T.y=b-rt*(b-T.y);T.k=nk},{passive:false});
+function resetView(){T={x:0,y:0,k:1};N.forEach(n=>{delete n.fx;delete n.fy})}
+function tick(){const a=.3;for(let i=0;i<N.length;i++)for(let j=i+1;j<N.length;j++){let dx=N[j].x-N[i].x,dy=N[j].y-N[i].y,d2=dx*dx+dy*dy||1;const d=Math.sqrt(d2),f=2000/d2,fx=dx/d*f,fy=dy/d*f;if(!N[i].fx){N[i].vx-=fx*a;N[i].vy-=fy*a}if(!N[j].fx){N[j].vx+=fx*a;N[j].vy+=fy*a}}
+E.forEach(e=>{const s=M[e.s],t=M[e.t];let dx=t.x-s.x,dy=t.y-s.y;const d=Math.sqrt(dx*dx+dy*dy)||1,f=(d-130)*.005*a;if(!s.fx){s.vx+=dx/d*f;s.vy+=dy/d*f}if(!t.fx){t.vx-=dx/d*f;t.vy-=dy/d*f}});
+N.forEach(n=>{if(n.fx){n.x=n.fx;n.y=n.fy;n.vx=0;n.vy=0;return}n.vx+=(W/2-n.x)*.0008;n.vy+=(H/2-n.y)*.0008;n.vx*=.85;n.vy*=.85;n.x+=n.vx;n.y+=n.vy;n.x=Math.max(n.r+10,Math.min(W-n.r-10,n.x));n.y=Math.max(n.r+10,Math.min(H-n.r-10,n.y))})}
+function darr(x1,y1,x2,y2,r){const a=Math.atan2(y2-y1,x2-x1),tx=x2-Math.cos(a)*r,ty=y2-Math.sin(a)*r;X.beginPath();X.moveTo(tx,ty);X.lineTo(tx-7*Math.cos(a-.4),ty-7*Math.sin(a-.4));X.moveTo(tx,ty);X.lineTo(tx-7*Math.cos(a+.4),ty-7*Math.sin(a+.4));X.stroke()}
+function draw(){X.save();X.clearRect(0,0,W,H);X.translate(T.x,T.y);X.scale(T.k,T.k);
+E.forEach(e=>{const s=M[e.s],t=M[e.t],dd=e.d;X.beginPath();X.strokeStyle=dd?'rgba(52,211,153,.4)':'rgba(255,255,255,.15)';X.lineWidth=dd?1:1.2;X.setLineDash(dd?[5,4]:[]);if(hv&&(e.s===hv.id||e.t===hv.id)){X.strokeStyle=dd?'rgba(52,211,153,.9)':'rgba(255,255,255,.45)';X.lineWidth=dd?1.5:2}X.moveTo(s.x,s.y);X.lineTo(t.x,t.y);X.stroke();X.setLineDash([]);darr(s.x,s.y,t.x,t.y,t.r+4);if(T.k>.6){const mx=(s.x+t.x)/2,my=(s.y+t.y)/2;let rot=Math.atan2(t.y-s.y,t.x-s.x);if(rot>Math.PI/2)rot-=Math.PI;if(rot<-Math.PI/2)rot+=Math.PI;X.save();X.translate(mx,my);X.rotate(rot);X.font='500 9px Inter,sans-serif';X.fillStyle='rgba(255,255,255,.3)';X.textAlign='center';X.textBaseline='bottom';X.fillText(e.l,0,-4);X.restore()}});
+N.forEach(n=>{const c=GC[n.group],cl=GL[n.group],h=hv&&hv.id===n.id;if(h){X.beginPath();X.arc(n.x,n.y,n.r+8,0,Math.PI*2);X.fillStyle=cl;X.fill()}X.beginPath();X.arc(n.x,n.y,n.r,0,Math.PI*2);X.fillStyle=h?c:cl;X.fill();X.strokeStyle=c;X.lineWidth=h?2:1;X.stroke();X.font=(h?'700':'500')+' 11px Inter,sans-serif';X.fillStyle=h?'#fff':'#d4d4d8';X.textAlign='center';X.textBaseline='middle';X.fillText(n.id,n.x,n.y)});X.restore()}
+!function loop(){tick();draw();requestAnimationFrame(loop)}();
+addEventListener('resize',()=>{W=C.clientWidth;H=C.clientHeight;C.width=W*D;C.height=H*D;X.setTransform(D,0,0,D,0,0)});
+</script>
+</body>
+</html>

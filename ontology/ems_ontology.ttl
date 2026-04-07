@@ -1,0 +1,873 @@
+@prefix ems:   <http://example.org/ems#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+
+# =============================================================================
+# SF EMERGENCY SERVICES KNOWLEDGE GRAPH — ONTOLOGY
+# =============================================================================
+# Inspired by Steve Hedden's "Film & Cinema Knowledge Graph" (FCKG) architecture.
+# This ontology defines the domain model for San Francisco's multi-agency
+# emergency response system, supporting predictive modeling across:
+#   - Incident severity classification
+#   - Multi-agency escalation prediction
+#   - Resolution time estimation
+#
+# Architecture follows Hedden's 4-layer pattern:
+#   Layer 1: Foundation (this file + instance data)
+#   Layer 2: Inference (SPARQL CONSTRUCT rules + inverse properties)
+#   Layer 3: Enrichment (external APIs via identifier expansion)
+#   Layer 4: Predictive models (features extracted, models trained)
+# =============================================================================
+
+<http://example.org/ems>
+    a owl:Ontology ;
+    rdfs:label "SF Emergency Services Ontology" ;
+    rdfs:comment "A layered semantic data foundation for multi-agency emergency response analysis and prediction." ;
+    owl:versionInfo "0.1.0" .
+
+# =============================================================================
+# CLASSES
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Incident — the central entity (equivalent to msh:Nomination in Hedden's FCKG)
+# -----------------------------------------------------------------------------
+# Every 911 call that generates a CAD record becomes an Incident.
+# This is the pivot point: responses, locations, predictions all connect here.
+
+ems:Incident
+    a owl:Class ;
+    rdfs:label "Incident" ;
+    rdfs:comment "A 911-dispatched event identified by a unique CAD number. Central entity in the graph — all responses, locations, call types, and predictions connect through this class." .
+
+# -----------------------------------------------------------------------------
+# Response — each unit dispatched to an incident
+# -----------------------------------------------------------------------------
+# One incident can have many responses (Engine 7 + Truck 1 + Medic 33).
+# Each response has its own timestamps: dispatch, en route, on scene, available.
+# This is how we derive multi-agency status and resource intensity.
+
+ems:Response
+    a owl:Class ;
+    rdfs:label "Response" ;
+    rdfs:comment "A single unit's dispatch-to-available lifecycle for one incident. Multiple responses per incident are common." .
+
+# -----------------------------------------------------------------------------
+# Unit — a specific vehicle or team (Engine 7, Medic 33, etc.)
+# -----------------------------------------------------------------------------
+
+ems:Unit
+    a owl:Class ;
+    rdfs:label "Unit" ;
+    rdfs:comment "A specific emergency response unit (e.g., Engine 7, Truck 1, Medic 33, Rescue Squad 2). Each unit belongs to one agency." .
+
+# -----------------------------------------------------------------------------
+# Agency — the reporting system (equivalent to msh:AwardSystem)
+# -----------------------------------------------------------------------------
+# Fire Department, Police Department, EMS.
+# Different agencies use different call type taxonomies for the same events.
+
+ems:Agency
+    a owl:Class ;
+    rdfs:label "Agency" ;
+    rdfs:comment "An emergency services agency (Fire, Police, EMS). Equivalent to AwardSystem in Hedden's model — each agency has its own taxonomy of call types." .
+
+# -----------------------------------------------------------------------------
+# CallType — per-agency incident category
+# -----------------------------------------------------------------------------
+# "Structure Fire" (Fire Dept), "Assault" (Police), "Medical Emergency" (EMS).
+# Each call type belongs to one agency and maps to an IncidentConcept.
+
+ems:CallType
+    a owl:Class ;
+    rdfs:label "Call type" ;
+    rdfs:comment "An agency-specific classification label assigned by the dispatcher. Different agencies may use different labels for the same underlying event type." .
+
+# -----------------------------------------------------------------------------
+# IncidentConcept — cross-agency type alignment (equivalent to msh:AwardConcept)
+# -----------------------------------------------------------------------------
+# This is the KEY class for cross-agency analysis.
+# "Traffic Collision" (Fire) and "Vehicle Accident" (Police) are both
+# realizations of the same IncidentConcept: TRAFFIC_COLLISION.
+# Without this, we cannot compare signals across agencies.
+
+ems:IncidentConcept
+    a owl:Class ;
+    rdfs:label "Incident concept" ;
+    rdfs:comment "An abstract incident type that unifies equivalent call types across agencies. Equivalent to AwardConcept in Hedden's model. E.g., Fire's 'Traffic Collision' and Police's 'Vehicle Accident' are both realizations of the same concept." .
+
+# -----------------------------------------------------------------------------
+# Location — geographic entity (intersection or call box)
+# -----------------------------------------------------------------------------
+
+ems:Location
+    a owl:Class ;
+    rdfs:label "Location" ;
+    rdfs:comment "A geographic point identified by intersection or call box address. Associated with latitude/longitude, neighborhood, and station area." .
+
+# -----------------------------------------------------------------------------
+# Neighborhood — SF neighborhood (Mission, SOMA, Tenderloin, etc.)
+# -----------------------------------------------------------------------------
+
+ems:Neighborhood
+    a owl:Class ;
+    rdfs:label "Neighborhood" ;
+    rdfs:comment "A named San Francisco neighborhood (e.g., Mission, SOMA, Tenderloin, Richmond)." .
+
+# -----------------------------------------------------------------------------
+# StationArea — fire department coverage zone
+# -----------------------------------------------------------------------------
+
+ems:StationArea
+    a owl:Class ;
+    rdfs:label "Station area" ;
+    rdfs:comment "A fire department station coverage zone. Used for response time analysis and resource allocation." .
+
+# -----------------------------------------------------------------------------
+# Battalion — fire department organizational unit above station
+# -----------------------------------------------------------------------------
+
+ems:Battalion
+    a owl:Class ;
+    rdfs:label "Battalion" ;
+    rdfs:comment "A fire department battalion grouping multiple station areas under one command." .
+
+# -----------------------------------------------------------------------------
+# TimeWindow — temporal context
+# -----------------------------------------------------------------------------
+
+ems:TimeWindow
+    a owl:Class ;
+    rdfs:label "Time window" ;
+    rdfs:comment "A temporal grouping (year, month, shift) for pattern analysis. Enables queries like 'are night-shift incidents in December more severe?'" .
+
+# -----------------------------------------------------------------------------
+# PredictionSet — a model run (equivalent to msh:ForecastSet)
+# -----------------------------------------------------------------------------
+
+ems:PredictionSet
+    a owl:Class ;
+    rdfs:label "Prediction set" ;
+    rdfs:comment "Metadata about a predictive model run: model type, feature set used, date generated, accuracy metrics. Equivalent to ForecastSet in Hedden's model." .
+
+# -----------------------------------------------------------------------------
+# Prediction — per-incident forecast (equivalent to msh:Forecast)
+# -----------------------------------------------------------------------------
+
+ems:Prediction
+    a owl:Class ;
+    rdfs:label "Prediction" ;
+    rdfs:comment "A model's prediction for a specific incident: predicted severity, escalation probability, or estimated resolution time." .
+
+# -----------------------------------------------------------------------------
+# EnrichmentSource — external data provenance
+# -----------------------------------------------------------------------------
+
+ems:EnrichmentSource
+    a owl:Class ;
+    rdfs:label "Enrichment source" ;
+    rdfs:comment "An external data source used to enrich the graph (NOAA weather, Census ACS, zoning data, etc.). Tracks provenance of enrichment data." .
+
+# -----------------------------------------------------------------------------
+# SeverityLevel — outcome classification
+# -----------------------------------------------------------------------------
+
+ems:SeverityLevel
+    a owl:Class ;
+    rdfs:label "Severity level" ;
+    rdfs:comment "A categorical severity classification for incidents (e.g., minor, moderate, severe, critical). Target variable for severity prediction." .
+
+
+# =============================================================================
+# OBJECT PROPERTIES (relationships between classes)
+# =============================================================================
+
+# --- Incident ↔ Response ---
+
+ems:hasResponse
+    a owl:ObjectProperty ;
+    rdfs:label "has response" ;
+    rdfs:comment "Links an incident to each unit response dispatched to it." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range ems:Response ;
+    owl:inverseOf ems:responseTo .
+
+ems:responseTo
+    a owl:ObjectProperty ;
+    rdfs:label "response to" ;
+    rdfs:comment "Links a response back to its parent incident. Inverse of hasResponse." ;
+    rdfs:domain ems:Response ;
+    rdfs:range ems:Incident .
+
+# --- Response → Unit ---
+
+ems:hasUnit
+    a owl:ObjectProperty ;
+    rdfs:label "has unit" ;
+    rdfs:comment "Links a response to the specific unit dispatched." ;
+    rdfs:domain ems:Response ;
+    rdfs:range ems:Unit .
+
+# --- Unit → Agency ---
+
+ems:belongsToAgency
+    a owl:ObjectProperty ;
+    rdfs:label "belongs to agency" ;
+    rdfs:comment "Links a unit to its parent agency." ;
+    rdfs:domain ems:Unit ;
+    rdfs:range ems:Agency .
+
+# --- Incident → CallType ---
+
+ems:hasCallType
+    a owl:ObjectProperty ;
+    rdfs:label "has call type" ;
+    rdfs:comment "The dispatcher-assigned call type for this incident." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range ems:CallType .
+
+# --- CallType → IncidentConcept ---
+
+ems:realizationOf
+    a owl:ObjectProperty ;
+    rdfs:label "realization of" ;
+    rdfs:comment "Maps an agency-specific call type to its abstract cross-agency concept. E.g., Fire's 'Traffic Collision' → concept TRAFFIC_COLLISION." ;
+    rdfs:domain ems:CallType ;
+    rdfs:range ems:IncidentConcept .
+
+# --- CallType → Agency ---
+
+ems:hasAgency
+    a owl:ObjectProperty ;
+    rdfs:label "has agency" ;
+    rdfs:comment "Links a call type to the agency whose taxonomy defines it." ;
+    rdfs:domain ems:CallType ;
+    rdfs:range ems:Agency .
+
+# --- Incident → Location ---
+
+ems:hasLocation
+    a owl:ObjectProperty ;
+    rdfs:label "has location" ;
+    rdfs:comment "The geographic location where the incident occurred." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range ems:Location .
+
+# --- Location → Neighborhood ---
+
+ems:inNeighborhood
+    a owl:ObjectProperty ;
+    rdfs:label "in neighborhood" ;
+    rdfs:comment "The SF neighborhood containing this location." ;
+    rdfs:domain ems:Location ;
+    rdfs:range ems:Neighborhood .
+
+# --- Location → StationArea ---
+
+ems:inStationArea
+    a owl:ObjectProperty ;
+    rdfs:label "in station area" ;
+    rdfs:comment "The fire station coverage area containing this location." ;
+    rdfs:domain ems:Location ;
+    rdfs:range ems:StationArea .
+
+# --- StationArea → Battalion ---
+
+ems:inBattalion
+    a owl:ObjectProperty ;
+    rdfs:label "in battalion" ;
+    rdfs:comment "The battalion this station area belongs to." ;
+    rdfs:domain ems:StationArea ;
+    rdfs:range ems:Battalion .
+
+# --- Incident → TimeWindow ---
+
+ems:inTimeWindow
+    a owl:ObjectProperty ;
+    rdfs:label "in time window" ;
+    rdfs:comment "The temporal grouping this incident falls into." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range ems:TimeWindow .
+
+# --- Incident → SeverityLevel ---
+
+ems:hasSeverity
+    a owl:ObjectProperty ;
+    rdfs:label "has severity" ;
+    rdfs:comment "The actual severity level of this incident (ground truth for training)." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range ems:SeverityLevel .
+
+# --- Incident → EnrichmentSource ---
+
+ems:enrichedBy
+    a owl:ObjectProperty ;
+    rdfs:label "enriched by" ;
+    rdfs:comment "Tracks which external sources have contributed data to this incident." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range ems:EnrichmentSource .
+
+# --- PredictionSet → Prediction ---
+
+ems:hasPrediction
+    a owl:ObjectProperty ;
+    rdfs:label "has prediction" ;
+    rdfs:comment "Links a prediction set to its individual predictions." ;
+    rdfs:domain ems:PredictionSet ;
+    rdfs:range ems:Prediction .
+
+# --- Prediction → Incident ---
+
+ems:predictsIncident
+    a owl:ObjectProperty ;
+    rdfs:label "predicts incident" ;
+    rdfs:comment "Links a prediction to the incident it forecasts." ;
+    rdfs:domain ems:Prediction ;
+    rdfs:range ems:Incident .
+
+# --- Prediction → SeverityLevel ---
+
+ems:predictsSeverity
+    a owl:ObjectProperty ;
+    rdfs:label "predicts severity" ;
+    rdfs:comment "The severity level this prediction forecasts." ;
+    rdfs:domain ems:Prediction ;
+    rdfs:range ems:SeverityLevel .
+
+# --- INFERRED RELATIONSHIPS (defined here, materialized in Layer 2) ---
+
+ems:nominatedFor
+    a owl:ObjectProperty ;
+    rdfs:label "nominated for" ;
+    rdfs:comment "INFERRED: Links a unit to incidents it has responded to. Derived from Response chain: Unit ← hasUnit ← Response → responseTo → Incident." ;
+    rdfs:domain ems:Unit ;
+    rdfs:range ems:Incident .
+
+ems:hasIncidentHistory
+    a owl:ObjectProperty ;
+    rdfs:label "has incident history" ;
+    rdfs:comment "INFERRED: Links a location to its historical incidents. Derived from inverse of hasLocation." ;
+    rdfs:domain ems:Location ;
+    rdfs:range ems:Incident ;
+    owl:inverseOf ems:hasLocation .
+
+ems:isMultiAgency
+    a owl:DatatypeProperty ;
+    rdfs:label "is multi-agency" ;
+    rdfs:comment "INFERRED: True if this incident has responses from more than one agency. Derived by counting distinct agencies across responses." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:boolean .
+
+
+# =============================================================================
+# DATATYPE PROPERTIES
+# =============================================================================
+
+# --- Incident properties ---
+
+ems:cadNumber
+    a owl:DatatypeProperty, owl:FunctionalProperty ;
+    rdfs:label "CAD number" ;
+    rdfs:comment "Unique Computer Aided Dispatch identifier. The primary join key across all agency datasets." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:string .
+
+ems:receivedTimestamp
+    a owl:DatatypeProperty ;
+    rdfs:label "received timestamp" ;
+    rdfs:comment "When the 911 call was received." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:dateTime .
+
+ems:entryTimestamp
+    a owl:DatatypeProperty ;
+    rdfs:label "entry timestamp" ;
+    rdfs:comment "When the incident was entered into the CAD system." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:dateTime .
+
+ems:priorityCode
+    a owl:DatatypeProperty ;
+    rdfs:label "priority code" ;
+    rdfs:comment "Dispatcher-assigned priority: 2 (non-emergency) or 3 (emergency)." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:integer .
+
+ems:finalDisposition
+    a owl:DatatypeProperty ;
+    rdfs:label "final disposition" ;
+    rdfs:comment "How the incident was resolved (e.g., Code 2 Transport, Unable to Locate, Fire Extinguished)." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:string .
+
+ems:responseCount
+    a owl:DatatypeProperty ;
+    rdfs:label "response count" ;
+    rdfs:comment "Total number of units dispatched to this incident." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:integer .
+
+ems:totalResolutionMinutes
+    a owl:DatatypeProperty ;
+    rdfs:label "total resolution minutes" ;
+    rdfs:comment "Time from call received to last unit available, in minutes. Target variable for resolution time prediction." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:decimal .
+
+# --- Response properties ---
+
+ems:dispatchTimestamp
+    a owl:DatatypeProperty ;
+    rdfs:label "dispatch timestamp" ;
+    rdfs:comment "When this unit was dispatched." ;
+    rdfs:domain ems:Response ;
+    rdfs:range xsd:dateTime .
+
+ems:enRouteTimestamp
+    a owl:DatatypeProperty ;
+    rdfs:label "en route timestamp" ;
+    rdfs:comment "When this unit started moving toward the scene." ;
+    rdfs:domain ems:Response ;
+    rdfs:range xsd:dateTime .
+
+ems:onSceneTimestamp
+    a owl:DatatypeProperty ;
+    rdfs:label "on scene timestamp" ;
+    rdfs:comment "When this unit arrived at the scene." ;
+    rdfs:domain ems:Response ;
+    rdfs:range xsd:dateTime .
+
+ems:transportTimestamp
+    a owl:DatatypeProperty ;
+    rdfs:label "transport timestamp" ;
+    rdfs:comment "When patient transport began (EMS responses only)." ;
+    rdfs:domain ems:Response ;
+    rdfs:range xsd:dateTime .
+
+ems:availableTimestamp
+    a owl:DatatypeProperty ;
+    rdfs:label "available timestamp" ;
+    rdfs:comment "When this unit became available again after handling the incident." ;
+    rdfs:domain ems:Response ;
+    rdfs:range xsd:dateTime .
+
+ems:responseTimeMinutes
+    a owl:DatatypeProperty ;
+    rdfs:label "response time minutes" ;
+    rdfs:comment "Time from dispatch to on-scene arrival, in minutes." ;
+    rdfs:domain ems:Response ;
+    rdfs:range xsd:decimal .
+
+# --- Location properties ---
+
+ems:address
+    a owl:DatatypeProperty ;
+    rdfs:label "address" ;
+    rdfs:comment "Street address or intersection description." ;
+    rdfs:domain ems:Location ;
+    rdfs:range xsd:string .
+
+ems:latitude
+    a owl:DatatypeProperty ;
+    rdfs:label "latitude" ;
+    rdfs:domain ems:Location ;
+    rdfs:range xsd:decimal .
+
+ems:longitude
+    a owl:DatatypeProperty ;
+    rdfs:label "longitude" ;
+    rdfs:domain ems:Location ;
+    rdfs:range xsd:decimal .
+
+ems:zipCode
+    a owl:DatatypeProperty ;
+    rdfs:label "zip code" ;
+    rdfs:domain ems:Location ;
+    rdfs:range xsd:string .
+
+# --- Unit properties ---
+
+ems:unitId
+    a owl:DatatypeProperty ;
+    rdfs:label "unit ID" ;
+    rdfs:comment "Official unit identifier (e.g., E07, T01, M33, RS02)." ;
+    rdfs:domain ems:Unit ;
+    rdfs:range xsd:string .
+
+ems:unitType
+    a owl:DatatypeProperty ;
+    rdfs:label "unit type" ;
+    rdfs:comment "Type of unit: ENGINE, TRUCK, MEDIC, RESCUE, CHIEF, PRIVATE, etc." ;
+    rdfs:domain ems:Unit ;
+    rdfs:range xsd:string .
+
+# --- TimeWindow properties ---
+
+ems:year
+    a owl:DatatypeProperty ;
+    rdfs:domain ems:TimeWindow ;
+    rdfs:range xsd:gYear .
+
+ems:month
+    a owl:DatatypeProperty ;
+    rdfs:domain ems:TimeWindow ;
+    rdfs:range xsd:integer .
+
+ems:dayOfWeek
+    a owl:DatatypeProperty ;
+    rdfs:comment "1=Monday ... 7=Sunday" ;
+    rdfs:domain ems:TimeWindow ;
+    rdfs:range xsd:integer .
+
+ems:shift
+    a owl:DatatypeProperty ;
+    rdfs:comment "Shift period: MORNING (06-14), AFTERNOON (14-22), NIGHT (22-06)." ;
+    rdfs:domain ems:TimeWindow ;
+    rdfs:range xsd:string .
+
+# --- PredictionSet properties ---
+
+ems:modelName
+    a owl:DatatypeProperty ;
+    rdfs:label "model name" ;
+    rdfs:comment "Name of the ML model used (e.g., ConstrainedLR_severity_v1)." ;
+    rdfs:domain ems:PredictionSet ;
+    rdfs:range xsd:string .
+
+ems:featureSet
+    a owl:DatatypeProperty ;
+    rdfs:label "feature set" ;
+    rdfs:comment "JSON-encoded list of features used in this model run." ;
+    rdfs:domain ems:PredictionSet ;
+    rdfs:range xsd:string .
+
+ems:dateGenerated
+    a owl:DatatypeProperty ;
+    rdfs:domain ems:PredictionSet ;
+    rdfs:range xsd:dateTime .
+
+ems:accuracy
+    a owl:DatatypeProperty ;
+    rdfs:label "accuracy" ;
+    rdfs:comment "Overall accuracy of the model on test data." ;
+    rdfs:domain ems:PredictionSet ;
+    rdfs:range xsd:decimal .
+
+ems:predictionTarget
+    a owl:DatatypeProperty ;
+    rdfs:label "prediction target" ;
+    rdfs:comment "What this model predicts: SEVERITY, MULTI_AGENCY, or RESOLUTION_TIME." ;
+    rdfs:domain ems:PredictionSet ;
+    rdfs:range xsd:string .
+
+# --- Prediction properties ---
+
+ems:predictedProbability
+    a owl:DatatypeProperty ;
+    rdfs:label "predicted probability" ;
+    rdfs:comment "Model confidence for classification predictions (0.0 to 1.0)." ;
+    rdfs:domain ems:Prediction ;
+    rdfs:range xsd:decimal .
+
+ems:predictedValue
+    a owl:DatatypeProperty ;
+    rdfs:label "predicted value" ;
+    rdfs:comment "Predicted numeric value for regression targets (e.g., estimated resolution minutes)." ;
+    rdfs:domain ems:Prediction ;
+    rdfs:range xsd:decimal .
+
+ems:predictedClass
+    a owl:DatatypeProperty ;
+    rdfs:label "predicted class" ;
+    rdfs:comment "Predicted category label (e.g., SEVERE, TRUE for multi-agency)." ;
+    rdfs:domain ems:Prediction ;
+    rdfs:range xsd:string .
+
+# --- Enrichment properties (Layer 3 — slots defined here, populated dynamically) ---
+
+ems:temperature
+    a owl:DatatypeProperty ;
+    rdfs:label "temperature" ;
+    rdfs:comment "ENRICHMENT: Ambient temperature at incident time (Fahrenheit). Source: NOAA." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:decimal .
+
+ems:precipitation
+    a owl:DatatypeProperty ;
+    rdfs:label "precipitation" ;
+    rdfs:comment "ENRICHMENT: Precipitation in inches at incident time. Source: NOAA." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:decimal .
+
+ems:windSpeed
+    a owl:DatatypeProperty ;
+    rdfs:label "wind speed" ;
+    rdfs:comment "ENRICHMENT: Wind speed in mph at incident time. Source: NOAA." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:decimal .
+
+ems:populationDensity
+    a owl:DatatypeProperty ;
+    rdfs:label "population density" ;
+    rdfs:comment "ENRICHMENT: Population per sq mile for the incident location. Source: Census ACS." ;
+    rdfs:domain ems:Location ;
+    rdfs:range xsd:decimal .
+
+ems:medianIncome
+    a owl:DatatypeProperty ;
+    rdfs:label "median income" ;
+    rdfs:comment "ENRICHMENT: Median household income for the area. Source: Census ACS." ;
+    rdfs:domain ems:Location ;
+    rdfs:range xsd:decimal .
+
+ems:zoningType
+    a owl:DatatypeProperty ;
+    rdfs:label "zoning type" ;
+    rdfs:comment "ENRICHMENT: Land use zoning (RESIDENTIAL, COMMERCIAL, INDUSTRIAL, MIXED). Source: SF Planning." ;
+    rdfs:domain ems:Location ;
+    rdfs:range xsd:string .
+
+ems:specialEvent
+    a owl:DatatypeProperty ;
+    rdfs:label "special event" ;
+    rdfs:comment "ENRICHMENT: Whether a major event was occurring nearby (parade, game, festival). Source: events calendar." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:boolean .
+
+# --- Fire Incident specific properties (from Fire Incidents dataset) ---
+
+ems:propertyLoss
+    a owl:DatatypeProperty ;
+    rdfs:label "property loss" ;
+    rdfs:comment "Estimated property loss in USD. Available for fire incidents." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:decimal .
+
+ems:contentLoss
+    a owl:DatatypeProperty ;
+    rdfs:label "content loss" ;
+    rdfs:comment "Estimated content loss in USD. Available for fire incidents." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:decimal .
+
+ems:primeSituation
+    a owl:DatatypeProperty ;
+    rdfs:label "prime situation" ;
+    rdfs:comment "Field observation code describing what was found on arrival. More accurate than initial call type." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:string .
+
+ems:actionsTaken
+    a owl:DatatypeProperty ;
+    rdfs:label "actions taken" ;
+    rdfs:comment "Primary action taken by responding units." ;
+    rdfs:domain ems:Incident ;
+    rdfs:range xsd:string .
+
+# --- Generic metadata ---
+
+ems:title
+    a owl:DatatypeProperty ;
+    rdfs:subPropertyOf rdfs:label ;
+    rdfs:range xsd:string .
+
+
+# =============================================================================
+# SEVERITY LEVEL INSTANCES (controlled vocabulary)
+# =============================================================================
+
+ems:Severity_MINOR
+    a ems:SeverityLevel ;
+    rdfs:label "Minor" ;
+    rdfs:comment "No injuries, minimal property damage, single unit sufficient." ;
+    skos:notation "1" .
+
+ems:Severity_MODERATE
+    a ems:SeverityLevel ;
+    rdfs:label "Moderate" ;
+    rdfs:comment "Minor injuries or moderate property damage, multiple units needed." ;
+    skos:notation "2" .
+
+ems:Severity_SEVERE
+    a ems:SeverityLevel ;
+    rdfs:label "Severe" ;
+    rdfs:comment "Serious injuries, significant property damage, or hazmat involvement." ;
+    skos:notation "3" .
+
+ems:Severity_CRITICAL
+    a ems:SeverityLevel ;
+    rdfs:label "Critical" ;
+    rdfs:comment "Life-threatening situation, mass casualty, major structural involvement." ;
+    skos:notation "4" .
+
+
+# =============================================================================
+# AGENCY INSTANCES (controlled vocabulary)
+# =============================================================================
+
+ems:Agency_SFFD
+    a ems:Agency ;
+    rdfs:label "San Francisco Fire Department" ;
+    ems:title "SFFD" .
+
+ems:Agency_SFPD
+    a ems:Agency ;
+    rdfs:label "San Francisco Police Department" ;
+    ems:title "SFPD" .
+
+ems:Agency_EMS
+    a ems:Agency ;
+    rdfs:label "Emergency Medical Services" ;
+    ems:title "EMS" ;
+    rdfs:comment "EMS in SF is operated by SFFD but treated as a distinct agency for call type alignment." .
+
+
+# =============================================================================
+# INCIDENT CONCEPT INSTANCES (cross-agency alignment — the key innovation)
+# =============================================================================
+# These are the abstract concepts that unify call types across agencies.
+# Equivalent to Hedden's AwardConcept (e.g., "Best Leading Actor" concept
+# that maps to Oscars, SAG, BAFTA, Globes categories).
+
+ems:Concept_STRUCTURE_FIRE
+    a ems:IncidentConcept ;
+    rdfs:label "Structure fire" ;
+    rdfs:comment "Fire in a building or enclosed structure." .
+
+ems:Concept_VEHICLE_FIRE
+    a ems:IncidentConcept ;
+    rdfs:label "Vehicle fire" .
+
+ems:Concept_TRAFFIC_COLLISION
+    a ems:IncidentConcept ;
+    rdfs:label "Traffic collision" ;
+    rdfs:comment "Collision involving motor vehicles, bicycles, or pedestrians." .
+
+ems:Concept_MEDICAL_EMERGENCY
+    a ems:IncidentConcept ;
+    rdfs:label "Medical emergency" ;
+    rdfs:comment "Medical incident requiring EMS response." .
+
+ems:Concept_HAZMAT
+    a ems:IncidentConcept ;
+    rdfs:label "Hazardous materials" .
+
+ems:Concept_RESCUE
+    a ems:IncidentConcept ;
+    rdfs:label "Rescue operation" ;
+    rdfs:comment "Extrication, water rescue, confined space, elevator rescue." .
+
+ems:Concept_ALARM
+    a ems:IncidentConcept ;
+    rdfs:label "Alarm activation" ;
+    rdfs:comment "Fire alarm, smoke alarm, CO alarm — may or may not involve actual emergency." .
+
+ems:Concept_PUBLIC_DISTURBANCE
+    a ems:IncidentConcept ;
+    rdfs:label "Public disturbance" ;
+    rdfs:comment "Disorderly conduct, noise complaints, public intoxication." .
+
+ems:Concept_ASSAULT
+    a ems:IncidentConcept ;
+    rdfs:label "Assault / violence" ;
+    rdfs:comment "Physical violence requiring police and potentially EMS response." .
+
+ems:Concept_WELFARE_CHECK
+    a ems:IncidentConcept ;
+    rdfs:label "Welfare check" ;
+    rdfs:comment "Check on wellbeing of a person — may involve police and/or EMS." .
+
+
+# =============================================================================
+# SAMPLE CALL TYPE → CONCEPT MAPPINGS
+# =============================================================================
+# These show how agency-specific labels map to shared concepts.
+
+ems:CallType_SFFD_StructureFire
+    a ems:CallType ;
+    rdfs:label "Structure Fire" ;
+    ems:hasAgency ems:Agency_SFFD ;
+    ems:realizationOf ems:Concept_STRUCTURE_FIRE .
+
+ems:CallType_SFFD_TrafficCollision
+    a ems:CallType ;
+    rdfs:label "Traffic Collision" ;
+    ems:hasAgency ems:Agency_SFFD ;
+    ems:realizationOf ems:Concept_TRAFFIC_COLLISION .
+
+ems:CallType_SFFD_MedicalIncident
+    a ems:CallType ;
+    rdfs:label "Medical Incident" ;
+    ems:hasAgency ems:Agency_SFFD ;
+    ems:realizationOf ems:Concept_MEDICAL_EMERGENCY .
+
+ems:CallType_SFFD_Alarm
+    a ems:CallType ;
+    rdfs:label "Alarms" ;
+    ems:hasAgency ems:Agency_SFFD ;
+    ems:realizationOf ems:Concept_ALARM .
+
+ems:CallType_SFFD_HazMat
+    a ems:CallType ;
+    rdfs:label "HazMat" ;
+    ems:hasAgency ems:Agency_SFFD ;
+    ems:realizationOf ems:Concept_HAZMAT .
+
+ems:CallType_SFPD_VehicleAccident
+    a ems:CallType ;
+    rdfs:label "Vehicle Accident" ;
+    ems:hasAgency ems:Agency_SFPD ;
+    ems:realizationOf ems:Concept_TRAFFIC_COLLISION .
+
+ems:CallType_SFPD_Assault
+    a ems:CallType ;
+    rdfs:label "Assault" ;
+    ems:hasAgency ems:Agency_SFPD ;
+    ems:realizationOf ems:Concept_ASSAULT .
+
+ems:CallType_SFPD_WelfareCheck
+    a ems:CallType ;
+    rdfs:label "Well Being Check" ;
+    ems:hasAgency ems:Agency_SFPD ;
+    ems:realizationOf ems:Concept_WELFARE_CHECK .
+
+ems:CallType_EMS_MedicalEmergency
+    a ems:CallType ;
+    rdfs:label "Medical Emergency" ;
+    ems:hasAgency ems:Agency_EMS ;
+    ems:realizationOf ems:Concept_MEDICAL_EMERGENCY .
+
+ems:CallType_EMS_TraumaInjury
+    a ems:CallType ;
+    rdfs:label "Trauma / Injury" ;
+    ems:hasAgency ems:Agency_EMS ;
+    ems:realizationOf ems:Concept_ASSAULT .
+
+
+# =============================================================================
+# ENRICHMENT SOURCE INSTANCES
+# =============================================================================
+
+ems:Source_NOAA
+    a ems:EnrichmentSource ;
+    rdfs:label "NOAA Weather" ;
+    rdfs:comment "National Oceanic and Atmospheric Administration weather data. Provides temperature, precipitation, wind at incident time." .
+
+ems:Source_CensusACS
+    a ems:EnrichmentSource ;
+    rdfs:label "Census ACS" ;
+    rdfs:comment "American Community Survey demographic data. Provides population density, median income by census tract." .
+
+ems:Source_SFPlanning
+    a ems:EnrichmentSource ;
+    rdfs:label "SF Planning Zoning" ;
+    rdfs:comment "San Francisco Planning Department zoning and land use data." .
+
+ems:Source_EventsCalendar
+    a ems:EnrichmentSource ;
+    rdfs:label "SF Events Calendar" ;
+    rdfs:comment "Major events calendar: sports, festivals, parades, conventions." .

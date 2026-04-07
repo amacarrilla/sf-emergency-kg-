@@ -1,0 +1,228 @@
+@prefix ems:   <http://example.org/ems#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+# =============================================================================
+# SAMPLE INSTANCE DATA — A real-world-style incident
+# =============================================================================
+# This shows how a single multi-agency incident looks when instanciated.
+# Compare with Hedden's example of "Sinners for Best Picture" nomination.
+#
+# Scenario: Traffic collision at Market & 5th St.
+#   - Fire Dept dispatches Engine 1 + Truck 1
+#   - EMS dispatches Medic 6
+#   - Police dispatches (logged in police CAD)
+#   → This is a multi-agency incident (inferred in Layer 2)
+# =============================================================================
+
+
+# --- The Incident (central entity) ---
+
+ems:Incident_CAD_230415001
+    a ems:Incident ;
+    rdfs:label "Traffic collision — Market St & 5th St — 2023-04-15" ;
+    ems:cadNumber "230415001" ;
+    ems:receivedTimestamp "2023-04-15T14:23:00"^^xsd:dateTime ;
+    ems:entryTimestamp "2023-04-15T14:23:15"^^xsd:dateTime ;
+    ems:priorityCode 3 ;
+    ems:hasCallType ems:CallType_SFFD_TrafficCollision ;
+    ems:hasLocation ems:Location_Market_5th ;
+    ems:inTimeWindow ems:TimeWindow_2023_04_SAT_AFTERNOON ;
+    ems:finalDisposition "Code 2 Transport" ;
+    ems:responseCount 4 ;
+    ems:totalResolutionMinutes 47.5 ;
+    ems:hasSeverity ems:Severity_MODERATE ;
+    ems:hasResponse ems:Response_230415001_E01 ,
+                    ems:Response_230415001_T01 ,
+                    ems:Response_230415001_M06 ,
+                    ems:Response_230415001_PD_Unit .
+
+# Note what is NOT stored here:
+#   - isMultiAgency → INFERRED in Layer 2 (responses span Fire + EMS + Police)
+#   - temperature, precipitation → ENRICHED in Layer 3 via NOAA API
+#   - populationDensity → ENRICHED in Layer 3 via Census ACS
+#   - predictions → ADDED in Layer 4 by model runs
+
+
+# --- Responses (each unit dispatched) ---
+
+ems:Response_230415001_E01
+    a ems:Response ;
+    rdfs:label "Engine 01 response to CAD 230415001" ;
+    ems:responseTo ems:Incident_CAD_230415001 ;
+    ems:hasUnit ems:Unit_E01 ;
+    ems:dispatchTimestamp "2023-04-15T14:23:30"^^xsd:dateTime ;
+    ems:enRouteTimestamp "2023-04-15T14:24:10"^^xsd:dateTime ;
+    ems:onSceneTimestamp "2023-04-15T14:27:45"^^xsd:dateTime ;
+    ems:availableTimestamp "2023-04-15T15:05:00"^^xsd:dateTime ;
+    ems:responseTimeMinutes 4.25 .
+
+ems:Response_230415001_T01
+    a ems:Response ;
+    rdfs:label "Truck 01 response to CAD 230415001" ;
+    ems:responseTo ems:Incident_CAD_230415001 ;
+    ems:hasUnit ems:Unit_T01 ;
+    ems:dispatchTimestamp "2023-04-15T14:23:30"^^xsd:dateTime ;
+    ems:enRouteTimestamp "2023-04-15T14:24:30"^^xsd:dateTime ;
+    ems:onSceneTimestamp "2023-04-15T14:28:15"^^xsd:dateTime ;
+    ems:availableTimestamp "2023-04-15T15:10:30"^^xsd:dateTime ;
+    ems:responseTimeMinutes 4.75 .
+
+ems:Response_230415001_M06
+    a ems:Response ;
+    rdfs:label "Medic 06 response to CAD 230415001" ;
+    ems:responseTo ems:Incident_CAD_230415001 ;
+    ems:hasUnit ems:Unit_M06 ;
+    ems:dispatchTimestamp "2023-04-15T14:24:00"^^xsd:dateTime ;
+    ems:enRouteTimestamp "2023-04-15T14:25:00"^^xsd:dateTime ;
+    ems:onSceneTimestamp "2023-04-15T14:30:00"^^xsd:dateTime ;
+    ems:transportTimestamp "2023-04-15T14:42:00"^^xsd:dateTime ;
+    ems:availableTimestamp "2023-04-15T15:10:30"^^xsd:dateTime ;
+    ems:responseTimeMinutes 6.0 .
+
+ems:Response_230415001_PD_Unit
+    a ems:Response ;
+    rdfs:label "SFPD unit response to CAD 230415001" ;
+    ems:responseTo ems:Incident_CAD_230415001 ;
+    ems:hasUnit ems:Unit_SFPD_3B ;
+    ems:dispatchTimestamp "2023-04-15T14:25:00"^^xsd:dateTime ;
+    ems:onSceneTimestamp "2023-04-15T14:32:00"^^xsd:dateTime ;
+    ems:availableTimestamp "2023-04-15T15:45:00"^^xsd:dateTime ;
+    ems:responseTimeMinutes 7.0 .
+
+
+# --- Units ---
+
+ems:Unit_E01
+    a ems:Unit ;
+    rdfs:label "Engine 01" ;
+    ems:unitId "E01" ;
+    ems:unitType "ENGINE" ;
+    ems:belongsToAgency ems:Agency_SFFD .
+
+ems:Unit_T01
+    a ems:Unit ;
+    rdfs:label "Truck 01" ;
+    ems:unitId "T01" ;
+    ems:unitType "TRUCK" ;
+    ems:belongsToAgency ems:Agency_SFFD .
+
+ems:Unit_M06
+    a ems:Unit ;
+    rdfs:label "Medic 06" ;
+    ems:unitId "M06" ;
+    ems:unitType "MEDIC" ;
+    ems:belongsToAgency ems:Agency_EMS .
+
+ems:Unit_SFPD_3B
+    a ems:Unit ;
+    rdfs:label "SFPD Unit 3B" ;
+    ems:unitId "3B" ;
+    ems:unitType "PATROL" ;
+    ems:belongsToAgency ems:Agency_SFPD .
+
+
+# --- Location ---
+
+ems:Location_Market_5th
+    a ems:Location ;
+    rdfs:label "Market St & 5th St" ;
+    ems:address "MARKET ST/5TH ST" ;
+    ems:latitude 37.7837 ;
+    ems:longitude -122.4070 ;
+    ems:zipCode "94103" ;
+    ems:inNeighborhood ems:Neighborhood_SOMA ;
+    ems:inStationArea ems:StationArea_01 .
+
+
+# --- Neighborhood ---
+
+ems:Neighborhood_SOMA
+    a ems:Neighborhood ;
+    rdfs:label "South of Market" .
+
+ems:Neighborhood_Mission
+    a ems:Neighborhood ;
+    rdfs:label "Mission" .
+
+ems:Neighborhood_Tenderloin
+    a ems:Neighborhood ;
+    rdfs:label "Tenderloin" .
+
+
+# --- Station Area ---
+
+ems:StationArea_01
+    a ems:StationArea ;
+    rdfs:label "Station 01" ;
+    ems:inBattalion ems:Battalion_01 .
+
+# --- Battalion ---
+
+ems:Battalion_01
+    a ems:Battalion ;
+    rdfs:label "Battalion 01" .
+
+
+# --- TimeWindow ---
+
+ems:TimeWindow_2023_04_SAT_AFTERNOON
+    a ems:TimeWindow ;
+    rdfs:label "2023 April Saturday Afternoon" ;
+    ems:year "2023"^^xsd:gYear ;
+    ems:month 4 ;
+    ems:dayOfWeek 6 ;
+    ems:shift "AFTERNOON" .
+
+
+# =============================================================================
+# WHAT LAYER 2 (INFERENCE) WOULD DERIVE FROM THIS DATA
+# =============================================================================
+# These triples are NOT stored — they emerge from the ontology structure.
+#
+# 1. ems:Incident_CAD_230415001 ems:isMultiAgency true .
+#    → Because responses include units from SFFD (E01, T01), EMS (M06),
+#      and SFPD (3B) — three distinct agencies.
+#
+# 2. ems:Unit_E01 ems:nominatedFor ems:Incident_CAD_230415001 .
+#    → Via chain: E01 ← hasUnit ← Response_E01 → responseTo → Incident
+#
+# 3. ems:Location_Market_5th ems:hasIncidentHistory ems:Incident_CAD_230415001 .
+#    → Via inverse of hasLocation.
+#
+# =============================================================================
+# WHAT LAYER 3 (ENRICHMENT) WOULD ADD
+# =============================================================================
+# These would be populated by API calls:
+#
+# ems:Incident_CAD_230415001
+#     ems:temperature 62.5 ;             # NOAA: 62.5°F at 2:23 PM
+#     ems:precipitation 0.0 ;            # NOAA: no rain
+#     ems:windSpeed 12.3 ;               # NOAA: 12.3 mph
+#     ems:specialEvent false ;           # No major event nearby
+#     ems:enrichedBy ems:Source_NOAA .
+#
+# ems:Location_Market_5th
+#     ems:populationDensity 18500.0 ;    # Census: dense urban
+#     ems:medianIncome 95000 ;           # Census: SOMA median
+#     ems:zoningType "COMMERCIAL" .      # SF Planning
+#
+# =============================================================================
+# WHAT LAYER 4 (PREDICTION) WOULD ADD
+# =============================================================================
+#
+# ems:PredictionSet_severity_v1_20230401
+#     a ems:PredictionSet ;
+#     ems:modelName "ConstrainedLR_severity_v1" ;
+#     ems:predictionTarget "SEVERITY" ;
+#     ems:featureSet "[\"priorityCode\",\"responseCount\",\"callType\",...]" ;
+#     ems:dateGenerated "2023-04-01T00:00:00"^^xsd:dateTime ;
+#     ems:accuracy 0.73 ;
+#     ems:hasPrediction ems:Prediction_sev_230415001 .
+#
+# ems:Prediction_sev_230415001
+#     a ems:Prediction ;
+#     ems:predictsIncident ems:Incident_CAD_230415001 ;
+#     ems:predictedClass "MODERATE" ;
+#     ems:predictsSeverity ems:Severity_MODERATE ;
+#     ems:predictedProbability 0.64 .

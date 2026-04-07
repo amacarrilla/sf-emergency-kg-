@@ -1,0 +1,10 @@
+# SF Emergency Services Knowledge Graph
+# ======================================
+# All scripts use Python 3.8+ standard library only.
+# No external packages required.
+#
+# Optional (not required to run the pipeline):
+#   rdflib        — for advanced RDF validation/querying
+#   pandas        — for data exploration
+#   scikit-learn  — for more sophisticated ML models
+#   matplotlib    — for charts and plots

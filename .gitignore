@@ -1,0 +1,55 @@
+# =============================================================================
+# SF Emergency Services Knowledge Graph — .gitignore
+# =============================================================================
+
+# --- Raw source data (download from SF Open Data, 1-2 GB each) ---
+data/raw/*.csv
+data/raw/*.json
+data/raw/*.xlsx
+data/raw/*.tsv
+
+# --- Generated RDF (100MB+ files, regenerate with csv_to_rdf.py) ---
+data/rdf/*.ttl
+data/rdf/inferred/*.ttl
+data/rdf/predictions/*.ttl
+
+# --- Map data export (can be 50-200MB, regenerate with export_map_data.py) ---
+docs/map_data.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+.python-version
+
+# --- Jupyter ---
+.ipynb_checkpoints/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+._*
+
+# --- IDE ---
+.vscode/settings.json
+.vscode/*.code-workspace
+.idea/
+*.swp
+*.swo
+*~
+
+# --- Logs ---
+*.log
+
+# --- Temporary ---
+*.tmp
+*.bak
