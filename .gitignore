@@ -7,6 +7,9 @@ data/raw/*.csv
 data/raw/*.json
 data/raw/*.xlsx
 data/raw/*.tsv
+data/raw/
+data/rdf/
+docs/map_data.json
 
 # --- Generated RDF (100MB+ files, regenerate with csv_to_rdf.py) ---
 data/rdf/*.ttl
