@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    platform: linux/amd64
+    container_name: sf_kg
+    ports:
+      - "6379:6379"
+      - "3000:3000"
+    volumes:
+      - falkordb_data:/data
+    restart: unless-stopped
+    mem_limit: 10g
+    memswap_limit: 10g
+
+volumes:
+  falkordb_data:
+    driver: local

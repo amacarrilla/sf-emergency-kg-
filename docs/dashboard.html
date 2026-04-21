@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SF Emergency KG — Dashboard — Paradigma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --navy:    #181F2C;
+  --coral:   #FF4745;
+  --bg:      #ffffff;
+  --bg2:     #F7F8FA;
+  --bg3:     #EEF0F4;
+  --text:    #181F2C;
+  --text2:   #5A6175;
+  --text3:   #8B92A5;
+  --border:  rgba(24,31,44,.10);
+  --border2: rgba(24,31,44,.06);
+  --green:   #34A853;
+  --amber:   #F59E0B;
+  --blue:    #2563EB;
+  --header:  52px;
+  --nav:     40px;
+  --mono:    'JetBrains Mono', monospace;
+  --sans:    'Inter', sans-serif;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  height: 100%; overflow: hidden;
+  background: var(--bg); color: var(--text);
+  font-family: var(--sans); font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── HEADER ── */
+header {
+  height: var(--header);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; flex-shrink: 0;
+}
+.logo { display:flex; align-items:center; gap:10px; }
+.brand-dot { width:7px; height:7px; border-radius:50%; background:var(--coral); }
+.logo-title { font-size:15px; font-weight:600; color:var(--navy); }
+.logo-title span { color:var(--coral); }
+.logo-back { color:var(--coral); font-size:12px; text-decoration:none; font-weight:500; margin-left:4px; }
+.logo-back:hover { opacity:.7; }
+
+.header-right {
+  display: flex; align-items: center; gap: 16px;
+  font-size: 12px; color: var(--text2);
+}
+.status { display:flex; align-items:center; gap:6px; font-weight:500; }
+.status-dot { width:6px; height:6px; border-radius:50%; background:var(--text3); }
+.status-dot.ok { background:var(--green); }
+.status-dot.err { background:var(--coral); }
+
+.year-sel { display:flex; align-items:center; gap:6px; }
+.year-sel label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; font-weight:500; }
+.year-sel select {
+  background:var(--bg2); border:1px solid var(--border);
+  color:var(--text); border-radius:8px; padding:4px 10px;
+  font-size:12px; font-family:var(--sans); cursor:pointer; outline:none;
+}
+.year-sel select:focus { border-color:var(--coral); }
+
+/* ── NAV ── */
+nav {
+  height: var(--nav);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border2);
+  display: flex; align-items: stretch; padding: 0 24px; gap: 4px;
+}
+.tab {
+  padding: 0 16px; font-family:var(--sans); font-size:12px; font-weight:500;
+  color:var(--text3); cursor:pointer; border:none; background:none;
+  border-bottom:2px solid transparent; transition:all .15s;
+}
+.tab:hover { color:var(--text2); }
+.tab.active { color:var(--coral); border-bottom-color:var(--coral); }
+
+/* ── PANELS ── */
+.panels { height:calc(100vh - var(--header) - var(--nav)); position:relative; overflow:hidden; }
+.panel { position:absolute; inset:0; display:none; overflow:hidden; padding:20px 24px; flex-direction:column; gap:14px; }
+.panel.active { display:flex; }
+
+/* ── STAT CARDS ── */
+.stats-row { display:flex; gap:12px; flex-shrink:0; }
+.stat {
+  background:var(--bg2); border:1px solid var(--border2);
+  border-radius:10px; padding:12px 16px; flex:1;
+  border-top:3px solid var(--coral);
+}
+.stat-label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; font-weight:500; margin-bottom:4px; }
+.stat-value { font-family:var(--mono); font-size:20px; font-weight:500; color:var(--navy); line-height:1; }
+.stat-sub { font-size:10px; color:var(--text3); margin-top:3px; }
+
+/* ── CHART GRID ── */
+.chart-grid {
+  display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;
+  gap:12px; flex:1; min-height:0;
+}
+.chart-card {
+  background:var(--bg); border:1px solid var(--border2);
+  border-radius:10px; padding:14px 16px;
+  display:flex; flex-direction:column; min-height:0;
+}
+.chart-label {
+  font-size:10px; color:var(--text3); text-transform:uppercase;
+  letter-spacing:.5px; font-weight:500; margin-bottom:10px; flex-shrink:0;
+}
+.chart-wrap { flex:1; min-height:0; position:relative; }
+
+/* ── EXPLORE ── */
+.explore-layout { display:grid; grid-template-columns:240px 1fr; gap:12px; flex:1; min-height:0; }
+.query-list { background:var(--bg2); border:1px solid var(--border2); border-radius:10px; overflow-y:auto; }
+.query-item {
+  padding:10px 14px; border-bottom:1px solid var(--border2); cursor:pointer;
+  transition:background .1s;
+}
+.query-item:hover { background:var(--bg3); }
+.query-item.active { background:rgba(255,71,69,.06); border-left:3px solid var(--coral); }
+.qi-title { font-size:12px; font-weight:500; color:var(--text); }
+.qi-id { font-family:var(--mono); font-size:9px; color:var(--text3); margin-top:2px; }
+
+.results-pane { background:var(--bg); border:1px solid var(--border2); border-radius:10px; display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+.results-head {
+  padding:10px 16px; border-bottom:1px solid var(--border2);
+  display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+  background:var(--bg2);
+}
+.results-head-title { font-size:13px; font-weight:600; color:var(--navy); }
+.results-head-meta { font-family:var(--mono); font-size:10px; color:var(--text3); }
+.results-body { flex:1; overflow:auto; }
+
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th {
+  padding:8px 14px; text-align:left; font-size:10px;
+  letter-spacing:.5px; text-transform:uppercase; font-weight:500;
+  color:var(--text3); background:var(--bg2); border-bottom:1px solid var(--border2);
+  position:sticky; top:0; z-index:1;
+}
+td { padding:7px 14px; border-bottom:1px solid var(--border2); color:var(--text); }
+tr:hover td { background:var(--bg2); }
+.num { font-family:var(--mono); }
+.accent { color:var(--coral); font-family:var(--mono); font-weight:500; }
+
+/* ── FORECAST ── */
+.forecast-controls { display:flex; align-items:center; gap:10px; flex-shrink:0; flex-wrap:wrap; }
+.forecast-controls label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; font-weight:500; }
+.forecast-controls select {
+  background:var(--bg2); border:1px solid var(--border); color:var(--text);
+  border-radius:8px; padding:5px 10px; font-size:12px; font-family:var(--sans); cursor:pointer; outline:none;
+}
+.forecast-controls select:focus { border-color:var(--coral); }
+.btn {
+  background:var(--coral); color:#fff; border:none; border-radius:8px;
+  padding:6px 16px; font-size:12px; font-family:var(--sans); font-weight:500;
+  cursor:pointer; transition:opacity .15s;
+}
+.btn:hover { opacity:.85; }
+.btn:disabled { opacity:.4; cursor:not-allowed; }
+.fc-status { font-size:11px; color:var(--text3); }
+
+.forecast-chart { background:var(--bg); border:1px solid var(--border2); border-radius:10px; padding:14px 16px; flex:1; min-height:0; display:flex; flex-direction:column; }
+.forecast-table { border:1px solid var(--border2); border-radius:10px; overflow:auto; max-height:150px; flex-shrink:0; background:var(--bg); }
+
+/* ── MAP ── */
+#panel-map .map-frame { width:100%; flex:1; border:1px solid var(--border2); border-radius:10px; min-height:0; }
+
+/* ── ABOUT ── */
+.about-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; flex:1; min-height:0; overflow:auto; }
+.about-card { background:var(--bg2); border:1px solid var(--border2); border-radius:10px; padding:18px; overflow:auto; }
+.about-card h3 { font-size:10px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; color:var(--coral); margin-bottom:10px; }
+.about-card p, .about-card li { font-size:12px; color:var(--text2); line-height:1.7; margin-bottom:4px; }
+.about-card ul { padding-left:16px; }
+.step { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--border2); }
+.step:last-child { border-bottom:none; }
+.step-n { font-family:var(--mono); font-size:10px; color:var(--coral); font-weight:500; min-width:22px; }
+.step-t { font-size:12px; font-weight:500; color:var(--navy); }
+.step-s { font-size:11px; color:var(--text3); margin-top:2px; }
+.tag { display:inline-block; font-family:var(--mono); font-size:9px; padding:2px 7px; background:rgba(255,71,69,.08); color:var(--coral); border-radius:4px; margin:2px; font-weight:500; }
+.tag.b { background:rgba(37,99,235,.08); color:var(--blue); }
+.imgs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.imgs img { width:100%; border:1px solid var(--border2); border-radius:6px; }
+.img-cap { font-size:10px; color:var(--text3); margin-top:3px; text-align:center; }
+
+/* ── HELPERS ── */
+.loading { display:flex; align-items:center; justify-content:center; height:100%; gap:8px; font-size:12px; color:var(--text3); }
+.spinner { width:16px; height:16px; border:2px solid var(--bg3); border-top-color:var(--coral); border-radius:50%; animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.empty { display:flex; align-items:center; justify-content:center; height:100%; font-size:12px; color:var(--text3); }
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:var(--bg2); }
+::-webkit-scrollbar-thumb { background:var(--bg3); border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:var(--text3); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="brand-dot"></div>
+    <span class="logo-title"><span>SF Emergency</span> KG Dashboard</span>
+    <a class="logo-back" href="map.html">← View Map</a>
+  </div>
+  <div class="header-right">
+    <div class="year-sel">
+      <label>Period</label>
+      <select id="yearFilter" onchange="onYearChange()">
+        <option value="2026">2026</option>
+        <option value="2025" selected>2025–now</option>
+        <option value="2024">2024–now</option>
+        <option value="2023">2023–now</option>
+        <option value="2020">All (2020+)</option>
+      </select>
+    </div>
+    <div class="status"><div class="status-dot" id="sdot"></div><span id="slabel">Connecting…</span></div>
+    <span id="snodes" style="font-family:var(--mono);font-size:11px;color:var(--text3)">—</span>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav>
+  <button class="tab active" onclick="showTab('overview',this)">Overview</button>
+  <button class="tab" onclick="showTab('explore',this)">Explore</button>
+  <button class="tab" onclick="showTab('forecast',this)">Forecast</button>
+  <button class="tab" onclick="showTab('map',this)">Map</button>
+  <button class="tab" onclick="showTab('about',this)">About</button>
+</nav>
+
+<!-- PANELS -->
+<div class="panels">
+
+  <!-- OVERVIEW -->
+  <div class="panel active" id="panel-overview">
+    <div class="stats-row" id="statsRow">
+      <div class="stat"><div class="stat-label">Loading</div><div class="stat-value">—</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-label">Incidents by neighborhood</div>
+        <div class="chart-wrap"><canvas id="cN"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-label">Year-over-year trend (2020–2026)</div>
+        <div class="chart-wrap"><canvas id="cY"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-label">Busiest time windows</div>
+        <div class="chart-wrap"><canvas id="cT"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-label">Police response time by district (avg min)</div>
+        <div class="chart-wrap"><canvas id="cP"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPLORE -->
+  <div class="panel" id="panel-explore">
+    <div class="explore-layout">
+      <div class="query-list" id="queryList">
+        <div class="loading"><div class="spinner"></div>Loading queries…</div>
+      </div>
+      <div class="results-pane">
+        <div class="results-head">
+          <span class="results-head-title" id="rTitle">Select a query</span>
+          <span class="results-head-meta" id="rMeta"></span>
+        </div>
+        <div class="results-body" id="rBody">
+          <div class="empty">← Pick a query from the list</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORECAST -->
+  <div class="panel" id="panel-forecast">
+    <div class="forecast-controls">
+      <label>Neighborhoods</label>
+      <select id="fcN"><option value="4">Top 4</option><option value="6" selected>Top 6</option><option value="8">Top 8</option></select>
+      <label>Months ahead</label>
+      <select id="fcM"><option value="3">3</option><option value="4" selected>4</option><option value="6">6</option></select>
+      <button class="btn" id="fcBtn" onclick="loadForecast()">Generate forecast</button>
+      <span class="fc-status" id="fcStatus"></span>
+    </div>
+    <div class="forecast-chart">
+      <div class="chart-label">Monthly incidents — historical + forecast</div>
+      <div style="flex:1;min-height:0;position:relative"><canvas id="cF"></canvas></div>
+    </div>
+    <div class="forecast-table" id="fcTable"></div>
+  </div>
+
+  <!-- MAP -->
+  <div class="panel" id="panel-map">
+    <iframe src="/map" class="map-frame" frameborder="0"></iframe>
+  </div>
+
+  <!-- ABOUT -->
+  <div class="panel" id="panel-about">
+    <div class="about-grid">
+      <div class="about-card">
+        <h3>What is this?</h3>
+        <p>A knowledge graph of San Francisco emergency services, built to demonstrate when graph databases add value over flat tabular approaches.</p>
+        <p>Integrates SFFD fire/EMS and SFPD police dispatches through a shared ontology — two independent datasets unified by semantic alignment.</p>
+        <br>
+        <h3>Data sources</h3>
+        <ul>
+          <li>SF Fire Dept Calls for Service — 3.4M records (2003–2026)</li>
+          <li>SFPD Dispatched Calls — 7.6M records (2014–2026)</li>
+          <li>Graph filtered to 2020+ → 10.5M nodes in FalkorDB</li>
+        </ul>
+      </div>
+      <div class="about-card">
+        <h3>Architecture — 5 phases</h3>
+        <div class="step"><span class="step-n">01</span><div><div class="step-t">RDF/TTL generation</div><div class="step-s">CSV → 344M triples · shared EMS ontology</div></div></div>
+        <div class="step"><span class="step-n">02</span><div><div class="step-t">FalkorDB graph database</div><div class="step-s">10.5M nodes · 8 Cypher query types</div></div></div>
+        <div class="step"><span class="step-n">03</span><div><div class="step-t">Smart query router</div><div class="step-s">Rule-based GRAPH vs FLAT classifier</div></div></div>
+        <div class="step"><span class="step-n">04</span><div><div class="step-t">Time series forecasting</div><div class="step-s">Ridge model · graph-derived features · 21% MAE improvement</div></div></div>
+        <div class="step"><span class="step-n">05</span><div><div class="step-t">This dashboard</div><div class="step-s">Flask · Chart.js · Paradigma branding</div></div></div>
+      </div>
+      <div class="about-card">
+        <h3>Tech stack</h3>
+        <div style="margin-top:4px">
+          <span class="tag">Python 3.9</span><span class="tag">FalkorDB</span>
+          <span class="tag">Docker</span><span class="tag">RDF/Turtle</span>
+          <span class="tag">Apache Jena</span><span class="tag">Flask</span>
+          <span class="tag">Chart.js</span>
+          <span class="tag b">scikit-learn</span><span class="tag b">pandas</span><span class="tag b">numpy</span>
+        </div>
+        <br>
+        <h3>Graph inventory</h3>
+        <div id="aboutStats" style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:6px">Loading…</div>
+      </div>
+      <div class="about-card">
+        <h3>Phase 4 — forecast outputs</h3>
+        <p style="font-size:11px;margin-bottom:8px">Charts generated by the graph-enriched Ridge model:</p>
+        <div class="imgs">
+          <div>
+            <img src="/docs/forecast_comparison.png" alt="" onerror="this.parentElement.style.display='none'">
+            <div class="img-cap">Forecast by neighborhood</div>
+          </div>
+          <div>
+            <img src="/docs/feature_importance.png" alt="" onerror="this.parentElement.style.display='none'">
+            <div class="img-cap">Feature importance (Ridge coef)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /panels -->
+
+<script>
+const API = '';
+let charts = {};
+let fcChart = null;
+let queriesLoaded = false;
+
+// ── CHART DEFAULTS ────────────────────────────────────────────────────────
+Chart.defaults.color = '#8B92A5';
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.size = 11;
+
+function yearFrom() { return document.getElementById('yearFilter').value; }
+
+async function post(url, body) {
+  const r = await fetch(API + url, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+  });
+  return r.json();
+}
+
+async function get(url) { return (await fetch(API + url)).json(); }
+
+function makeChart(id, type, labels, values, color, indexAxis) {
+  const ctx = document.getElementById(id).getContext('2d');
+  if (charts[id]) charts[id].destroy();
+  const isBar = type === 'bar';
+  charts[id] = new Chart(ctx, {
+    type,
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: isBar ? color + '22' : color + '12',
+        borderColor: color,
+        borderWidth: isBar ? 1 : 2,
+        fill: !isBar,
+        tension: 0.35,
+        pointRadius: isBar ? 0 : 2,
+        pointBackgroundColor: color,
+        borderRadius: isBar ? 4 : 0,
+      }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display:false }, tooltip: {
+        backgroundColor:'#fff', titleColor:'#181F2C', bodyColor:'#5A6175',
+        borderColor:'rgba(24,31,44,.1)', borderWidth:1,
+        padding:10, cornerRadius:8,
+        callbacks: { label: ctx => ' ' + Number(ctx.raw).toLocaleString() }
+      }},
+      indexAxis: indexAxis || 'x',
+      scales: {
+        x: { grid:{color:'rgba(24,31,44,.05)'}, ticks:{color:'#8B92A5', maxRotation:35} },
+        y: { grid:{color:'rgba(24,31,44,.05)'}, ticks:{color:'#8B92A5', callback: v => Number(v).toLocaleString()} },
+      },
+    },
+  });
+}
+
+// ── TABS ─────────────────────────────────────────────────────────────────
+function showTab(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  el.classList.add('active');
+  if (name === 'explore' && !queriesLoaded) loadQueries();
+}
+
+function onYearChange() { loadOverview(); }
+
+// ── STATS ─────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const d = await get('/api/stats');
+    if (d.error) throw new Error(d.error);
+
+    document.getElementById('sdot').classList.add('ok');
+    document.getElementById('slabel').textContent = 'FalkorDB connected';
+    document.getElementById('snodes').textContent = d.total.toLocaleString() + ' nodes';
+
+    const priority = ['Incident','PoliceResponse','Response','Location','CallType','Neighborhood'];
+    const row = document.getElementById('statsRow');
+    row.innerHTML = '';
+    priority.forEach(t => {
+      const s = d.stats.find(x => x.type === t);
+      if (!s) return;
+      const label = t.replace(/([A-Z])/g,' $1').trim();
+      row.innerHTML += `<div class="stat">
+        <div class="stat-label">${label}</div>
+        <div class="stat-value">${s.count.toLocaleString()}</div>
+      </div>`;
+    });
+
+    document.getElementById('aboutStats').innerHTML = d.stats
+      .map(s => `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border2)">
+        <span>${s.type}</span>
+        <span style="color:var(--coral);font-weight:500">${s.count.toLocaleString()}</span>
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('sdot').classList.add('err');
+    document.getElementById('slabel').textContent = 'Connection error';
+  }
+}
+
+// ── OVERVIEW ─────────────────────────────────────────────────────────────
+async function loadOverview() {
+  const yr = yearFrom();
+  const cfgs = [
+    { id:'neighborhoods_by_volume',      canvas:'cN', type:'bar',  col:0, val:1, color:'#FF4745', axis:'y',
+      fmt: l => l.replace('Neighborhood_','').replace(/_/g,' ').substring(0,20) },
+    { id:'yearly_trend',                 canvas:'cY', type:'line', col:0, val:1, color:'#181F2C',
+      fmt: l => String(l) },
+    { id:'busiest_time_windows',         canvas:'cT', type:'bar',  col:2, val:2, color:'#FF4745',
+      fmt: (l,row) => (['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][row[1]-1]||'?')+' '+row[0] },
+    { id:'police_response_by_district',  canvas:'cP', type:'bar',  col:0, val:1, color:'#181F2C', axis:'y',
+      fmt: l => l.replace('PoliceDistrict_','') },
+  ];
+  for (const cfg of cfgs) {
+    try {
+      const d = await post('/api/query', { query_id: cfg.id, year_from: yr });
+      if (d.error || !d.rows) continue;
+      const labels = d.rows.map((row) => cfg.fmt(String(row[cfg.col]), row));
+      const values = d.rows.map(row => row[cfg.val]);
+      makeChart(cfg.canvas, cfg.type, labels, values, cfg.color, cfg.axis);
+    } catch(e) { console.error(cfg.id, e); }
+  }
+}
+
+// ── EXPLORE ───────────────────────────────────────────────────────────────
+async function loadQueries() {
+  const queries = await get('/api/queries');
+  queriesLoaded = true;
+  const list = document.getElementById('queryList');
+  list.innerHTML = '';
+  queries.forEach(q => {
+    const el = document.createElement('div');
+    el.className = 'query-item';
+    el.innerHTML = `<div class="qi-title">${q.title}</div><div class="qi-id">${q.id}</div>`;
+    el.onclick = () => runQuery(q.id, el);
+    list.appendChild(el);
+  });
+}
+
+async function runQuery(qid, el) {
+  document.querySelectorAll('.query-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('rTitle').textContent = 'Running query…';
+  document.getElementById('rMeta').textContent = '';
+  document.getElementById('rBody').innerHTML = '<div class="loading"><div class="spinner"></div>Querying FalkorDB…</div>';
+
+  const d = await post('/api/query', { query_id: qid, year_from: yearFrom() });
+  if (d.error) {
+    document.getElementById('rBody').innerHTML = `<div class="empty" style="color:var(--coral)">${d.error}</div>`;
+    return;
+  }
+  document.getElementById('rTitle').textContent = d.title;
+  document.getElementById('rMeta').textContent = `${d.count} rows · ${d.elapsed}s`;
+
+  let html = '<table><thead><tr>';
+  d.columns.forEach(c => { html += `<th>${c[1]||c}</th>`; });
+  html += '</tr></thead><tbody>';
+  d.rows.forEach(row => {
+    html += '<tr>';
+    row.forEach(cell => {
+      let v = cell === null ? '<span style="color:var(--text3)">—</span>' : String(cell);
+      if (!isNaN(v) && v !== '') v = `<span class="accent">${Number(v).toLocaleString()}</span>`;
+      html += `<td>${v}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('rBody').innerHTML = html;
+}
+
+// ── FORECAST ──────────────────────────────────────────────────────────────
+async function loadForecast() {
+  const btn = document.getElementById('fcBtn');
+  btn.disabled = true;
+  document.getElementById('fcStatus').textContent = 'Fetching data…';
+
+  const n = document.getElementById('fcN').value;
+  const m = document.getElementById('fcM').value;
+  const d = await get(`/api/forecast?neighborhoods=${n}&months=${m}&year_from=2020`);
+  btn.disabled = false;
+
+  if (d.error) { document.getElementById('fcStatus').textContent = '✗ ' + d.error; return; }
+  document.getElementById('fcStatus').textContent = `${d.neighborhoods.length} neighborhoods · ${d.forecast.length} forecast points`;
+
+  renderFcChart(d);
+  renderFcTable(d);
+}
+
+function renderFcChart(data) {
+  const COLORS = ['#FF4745','#181F2C','#34A853','#F59E0B','#2563EB','#7C3AED','#06b6d4','#ec4899'];
+  const allDates = new Set();
+  [...data.historical,...data.forecast].forEach(r => allDates.add(`${r.year}-${String(r.month).padStart(2,'0')}`));
+  const labels = Array.from(allDates).sort();
+
+  const datasets = [];
+  data.neighborhoods.forEach((n,i) => {
+    const c = COLORS[i % COLORS.length];
+    const hist = data.historical.filter(r => r.neighborhood === n);
+    const fore = data.forecast.filter(r => r.neighborhood === n);
+    datasets.push({
+      label: n.replace(/_/g,' '),
+      data: labels.map(l => { const [y,m]=l.split('-'); const r=hist.find(x=>x.year==y&&x.month==m); return r?r.incidents:null; }),
+      borderColor:c, backgroundColor:'transparent', borderWidth:1.5, pointRadius:0, tension:.3,
+    });
+    datasets.push({
+      label: n+' (forecast)',
+      data: labels.map(l => { const [y,m]=l.split('-'); const r=fore.find(x=>x.year==y&&x.month==m); return r?r.forecast:null; }),
+      borderColor:c, backgroundColor:'transparent', borderWidth:2.5,
+      borderDash:[5,3], pointRadius:4, pointBackgroundColor:c, tension:.3,
+    });
+  });
+
+  const ctx = document.getElementById('cF').getContext('2d');
+  if (fcChart) fcChart.destroy();
+  fcChart = new Chart(ctx, {
+    type:'line', data:{labels, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true, position:'bottom', labels:{
+          color:'#8B92A5', font:{size:10}, boxWidth:12,
+          filter: item => !item.text.endsWith('(forecast)')
+        }},
+        tooltip:{
+          backgroundColor:'#fff', titleColor:'#181F2C', bodyColor:'#5A6175',
+          borderColor:'rgba(24,31,44,.1)', borderWidth:1, padding:10, cornerRadius:8,
+        },
+      },
+      scales:{
+        x:{grid:{color:'rgba(24,31,44,.05)'}, ticks:{color:'#8B92A5',maxRotation:45,font:{size:10}}},
+        y:{grid:{color:'rgba(24,31,44,.05)'}, ticks:{color:'#8B92A5',callback:v=>v.toLocaleString()}},
+      },
+    },
+  });
+}
+
+function renderFcTable(data) {
+  if (!data.forecast.length) return;
+  const sample = data.forecast.filter(r=>r.neighborhood===data.neighborhoods[0]);
+  let html = '<table><thead><tr><th>Neighborhood</th>';
+  sample.forEach(r => { html += `<th>${r.year}-${String(r.month).padStart(2,'0')}</th>`; });
+  html += '</tr></thead><tbody>';
+  data.neighborhoods.forEach(n => {
+    const rows = data.forecast.filter(r=>r.neighborhood===n);
+    html += `<tr><td style="font-weight:500">${n.replace(/_/g,' ')}</td>`;
+    rows.forEach(r => { html += `<td class="accent">${r.forecast.toLocaleString()}</td>`; });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('fcTable').innerHTML = html;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+(async () => {
+  await loadStats();
+  await loadOverview();
+})();
+</script>
+</body>
+</html>
